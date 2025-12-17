@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>球体场景应用</title>
+    <style media="screen">
+        * {
+            margin: 0;
+            padding: 0
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+            width: 100%
+        }
+
+        .model {
+            flex: 1
+        }
+
+        .buttons {
+            font-size: 0;
+        }
+
+        .button {
+            margin: 5px 0 5px 5px;
+            width: 100px;
+            height: 30px;
+            border-radius: 3px;
+            border: none;
+            background: #32D3A6;
+            color: #FFFFFF;
+        }
+    </style>
+    <!-- 引用BIMFACE的JavaScript显示组件库 -->
+    <script src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js" charset="utf-8"></script>
+</head>
+
+<body>
+    <!-- 定义DOM元素，用于在该DOM元素中显示模型或图纸 -->
+    <div class='main'>
+        <div class='buttons'>
+            <button class="button" id="btnChangeMap" onclick="changeMap()">切换地图</button>
+            <button class="button" id="btnSetCameraStatus" onclick="setCameraStatus()">相机视角定位</button>
+            <button class="button" id="btnAddBIMLayer" onclick="addBIMLayer()">添加BIM模型</button>
+            <button class="button" id="btnAddMarker3D" onclick="addMarker3D()">点击添加标签</button>
+            <button class="button" id="btnAddSplineCurve" onclick="addSplineCurve()">绘制曲线</button>
+        </div>
+        <!-- 定义DOM元素，用于在该DOM元素中显示场景 -->
+        <div class='model' id="domId"></div>
+    </div>
+    <script type="text/javascript">
+        // 声明 viewer 及 app
+        let viewer, app;
+        // 声明 UI管理器、主工具条、图层管理器
+        let uiMng, mainToolbar, layerMng;
+        // 声明外部构件图层，外部构件管理器，用于添加样条曲线等对象
+        let extLayer,extMng;
+        // 声明三维标签管理器对象
+        let marker3DContainer;
+
+        // 球体场景的viewToken
+        let viewToken = 'e74cbde6f9ae482e80871cf4bc7a5bd7';
+
+        // 初始化SDKLoader
+        let BimfaceLoaderConfig = new BimfaceSDKLoaderConfig();
+        BimfaceLoaderConfig.viewToken = viewToken;
+
+        BimfaceSDKLoader.load(BimfaceLoaderConfig, onSDKLoadSucceeded, onSDKLoadFailed);
+
+        // 资源加载成功的回调函数
+        function onSDKLoadSucceeded(viewMetaData) {
+
+          // 构造app
+          let dom4Show = document.getElementById('domId');
+          let webAppConfig = new Glodon.Bimface.Earth.Application.WebApplicationGISConfig();
+          webAppConfig.domElement = dom4Show;
+
+          app = new Glodon.Bimface.Earth.Application.WebApplicationGIS(webAppConfig);
+
+          // 获取viewer对象并加载场景
+          viewer = app.getViewer();
+          viewer.addScene(viewToken);
+
+          // 场景加载的监听事件，场景加载后可获取图层管理器对象，进行图层添加等操作
+          viewer.addEventListener(Glodon.Bimface.Earth.Viewer.ViewerGISEvent.SceneAdded, function () {
+            // 获取图层管理器
+            layerMng = viewer.getLayerManager();
+            // 获取UI管理器
+            uiMng = app.getUIManager();
+            // 获取主工具条
+            mainToolbar = uiMng.getToolbar('MainToolbar');
+            // 构造三维标签管理器
+            let markerConfig = new Glodon.Bimface.Earth.Plugins.Marker3D.Marker3DContainerConfig();
+            markerConfig.viewer = viewer;
+            marker3DContainer = new Glodon.Bimface.Earth.Plugins.Marker3D.Marker3DContainer(markerConfig);
+
+            // 构造外部构件图层，并添加至场景内
+            let extLayer = new Glodon.Bimface.Earth.Layer.ExternalObjectLayer({id:'ext',name:'exename'});
+            viewer.getLayerManager().addLayer(extLayer); 
+            // 获取外部构件图层对应的管理器对象
+            extMng = layerMng.getLayer('ext').getExternalObjectManager();
+
+          });
+
+          // 图层加载的监听事件，可在指定图层加载完成后定位相机至图层包围盒
+          viewer.addEventListener(Glodon.Bimface.Earth.Viewer.ViewerGISEvent.LayerAdded,function(data){
+            if(data.layerId == 'layer-2517075049457408'){
+              // 相机缩放至模型包围盒
+              let bimLayer = layerMng.getLayer('layer-2517075049457408');
+              viewer.getCamera().zoomToBoundingBox({boundingBox:bimLayer.getBoundingBox()});
+            }
+          })
+
+        }
+
+        // 资源加载失败的回调函数
+        function onSDKLoadFailed(error) {
+          console.log(error);
+        }
+
+        let isMapChanged = false;
+        // 切换地图资源
+        function changeMap() {
+          if(!isMapChanged){
+            // 获取地图图层对象
+            let tileLayer = layerMng.getLayer('layer_map_1');
+            // 设置地图资源为天地图影像资源
+            tileLayer.setSource({
+              url: 'http://t0.tianditu.gov.cn/img_w/wmts?tk=c2afdfb9ed8a55620e5411f98cc85556',
+              provider: 'Tianditu',
+              credit: Glodon.Bimface.Common.Credit.Tianditu
+            }); 
+            isMapChanged = true;
+          }
+        }
+
+        // 相机视角定位
+        function setCameraStatus() {
+          // 缩放相机至指定视角，具体视角可基于CameraGIS.getStatus()接口获取
+          viewer.getCamera().setStatus({
+            orientation:{pitch:-1.2425808580399136,yaw:3.920252926403413,roll:0},
+            position:{lat:33.761973270228054,lon:113.03169694448638,alt:399.4244951931313}
+          });
+        }
+
+        let isLayerAdded = false;
+        // 添加模型资源
+        function addBIMLayer() {
+          if(!isLayerAdded){
+            // 构造BIMLayer对象
+            let bimLayer = new Glodon.Bimface.Earth.Layer.BIMLayer({
+              name: "bim模型",
+              id: 'layer-2517075049457408',
+              isVisible: true,
+              viewToken:'39436a9995de4efeacfe1a2c55e9a65e',
+              // 设置模型原点对应的经纬度高程位置
+              location:{lat: 31.235513027, lon: 121.467074118, alt: -35.000}
+            });
+            layerMng.addLayer(bimLayer);
+            isLayerAdded = true;
+          }
+        }
+
+        let isAddItemActivated = false;
+        // 添加三维标签
+        function addMarker3D() {
+          if(!isAddItemActivated){
+            // 基于鼠标监听事件，在点击出添加三维标签
+            viewer.addEventListener(Glodon.Bimface.Earth.Viewer.ViewerGISEvent.MouseClicked, addItems);
+            setButtonText('btnAddMarker3D', '结束添加');
+          }else{
+            // 移除鼠标点击监听事件，结束添加标签
+            viewer.removeEventListener(Glodon.Bimface.Earth.Viewer.ViewerGISEvent.MouseClicked, addItems);
+            setButtonText('btnAddMarker3D', '点击添加标签');
+          }
+          isAddItemActivated = !isAddItemActivated;
+        }
+
+
+        // 添加三维标签的方法
+        function addItems(data) {
+          // 构造三维标签配置项
+          let config = new Glodon.Bimface.Earth.Plugins.Marker3D.Marker3DConfig();
+          // 定义标签的内容
+          config.src = "http://static.bimface.com/resources/3DMarker/warner/warner_red.png";
+          // 设置标签位置，经纬度+高度
+          config.location = data.location;
+
+          let marker3d = new Glodon.Bimface.Earth.Plugins.Marker3D.Marker3D(config);
+          
+          // 将标签添加到标签容器中
+          marker3DContainer.addItem(marker3d);
+
+        }
+
+        let isSplineCurveAdded = false;
+        // 绘制样条曲线
+        function addSplineCurve(){
+          if(!isSplineCurveAdded){
+            // 移动相机至对应视角
+            viewer.getCamera().setStatus({
+              orientation:{pitch:-1.1535888813493709,yaw:3.1859999557684535,roll:0},
+              position:{lat:31.241772466208168,lon:121.68019654766599,alt:1141.3346056420075}}
+            );
+            // 构造样条曲线对象
+            let splineCurve1 = new Glodon.Bimface.Earth.Plugins.Geometry.SplineCurve({
+              points:[
+                {lat: 31.23559505154976, lon: 121.67564260301518, alt: 2}, 
+                {lat: 31.2352222951436, lon: 121.67417810919687, alt: 2},
+                {lat: 31.236875923702854, lon: 121.67352265779911, alt: 2},
+                {lat: 31.237297306032453, lon: 121.67491686486159, alt: 2},
+                {lat: 31.23559505154976, lon: 121.67564260301518, alt: 2}
+              ],
+              type:'polyline',
+              viewer:viewer
+            });
+            let splineCurve2 = new Glodon.Bimface.Earth.Plugins.Geometry.SplineCurve({
+              points:[
+                {lat: 31.23939325954294, lon: 121.68339063567447, alt: 2}, 
+                {lat: 31.239027937507725, lon: 121.68171545659432, alt: 2},
+                {lat: 31.24087466798205, lon: 121.68137403710695, alt: 2},
+                {lat: 31.241153966487314, lon: 121.68286204505281, alt: 2},
+                {lat: 31.23939325954294, lon: 121.68339063567447, alt: 2}
+              ],
+              type:'polyline',
+              viewer:viewer
+            });
+            // 将样条曲线添加至外部构件管理器内
+            extMng.loadObject({ name: "splineCurve1", object: splineCurve1 },function(){
+              // 添加完成后输出外部构件对应ID
+              console.log(extMng.getObjectIdByName('splineCurve1'));
+              // 移动相机至对应视角
+            });
+            extMng.loadObject({ name: "splineCurve2", object: splineCurve2 },function(){
+              // 添加完成后输出外部构件对应ID
+              console.log(extMng.getObjectIdByName('splineCurve2'));
+              // 移动相机至对应视角
+            });
+            // 设置曲线宽度
+            splineCurve1.setWidth(3);
+            splineCurve1.setColor(new Glodon.Web.Graphics.Color(255,0,0,1));
+            splineCurve2.setWidth(3);
+            splineCurve2.setColor(new Glodon.Web.Graphics.Color(255,0,0,1));
+            viewer.render();
+            setButtonText('btnAddSplineCurve', '移除曲线');
+          }else{
+            // 移除样条曲线
+            extMng.removeById(extMng.getObjectIdByName('splineCurve1'));
+            extMng.removeById(extMng.getObjectIdByName('splineCurve2'));
+            setButtonText('btnAddSplineCurve', '绘制曲线');
+          }
+          isSplineCurveAdded = !isSplineCurveAdded;
+
+        }
+
+        function setButtonText(btnId, text) {
+            let dom = document.getElementById(btnId);
+            if (dom != null && dom.nodeName == "BUTTON") {
+                dom.innerText = text;
+            }
+        }
+
+    </script>
+</body>
+
+</html>

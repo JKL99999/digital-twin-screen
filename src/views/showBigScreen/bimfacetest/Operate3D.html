@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>三维标签</title>
+    <style media="screen">
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+        }
+
+        .model {
+            flex: 1;
+        }
+
+        .button {
+            margin: 5px 0 5px 5px;
+            width: 120px;
+            height: 30px;
+            background: #32D3A6;
+            color: #FFFFFF;
+            border-radius: 3px;
+            border: none;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .bf_demo_label {
+            line-height: 40px;
+            margin-left: 5px;
+            font-size: 15px;
+            vertical-align: middle;
+        }
+
+        .bf_demo_radio {
+            display: none;
+        }
+
+        .bf_demo_radio+label {
+            position: relative;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            border: 1px solid #9a9a9a;
+            background-color: transparent;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 15px;
+        }
+
+        .bf_demo_radio:checked+label {
+            position: relative;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            border: 1px solid #32D3A6;
+            background-color: transparent;
+            display: inline-block;
+        }
+
+        .bf_demo_radio:checked+label:after {
+            position: absolute;
+            content: '';
+            font-size: 0;
+            border: 4px solid #32D3A6;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+        }
+
+        .bf_demo_option_text {
+            margin-right: 15px;
+            vertical-align: middle;
+            line-height: 40px;
+            vertical-align: middle;
+        }
+        .floating-panel {
+            position: fixed;
+            right: 20px;
+            top: 80px;
+            width: 320px;
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            padding: 12px;
+            display: none;
+        }
+        .floating-panel .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            color: #051628;
+            margin-bottom: 8px;
+        }
+        .floating-panel .close-btn {
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            font-size: 16px;
+        }
+        .floating-panel pre {
+            background: #f7f7f7;
+            padding: 8px;
+            border-radius: 4px;
+            max-height: 220px;
+            overflow: auto;
+        }
+        .floating-list {
+            position: fixed;
+            left: 360px;
+            top: 80px;
+            width: 280px;
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            padding: 12px;
+            display: none;
+        }
+        .floating-list .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            color: #051628;
+            margin-bottom: 8px;
+        }
+        .floating-list ul { list-style: none; max-height: 260px; overflow: auto; }
+        .floating-list li { padding: 6px 8px; cursor: pointer; border-radius: 4px; }
+        .floating-list li:hover { background: #f2f6fc; }
+    </style>
+    <!-- 引用BIMFACE的JavaScript显示组件库 -->
+    <script src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js" charset="utf-8">
+    </script>
+</head>
+
+<body>
+    <div class='main'>
+        <div class='buttons'>
+            <button class="button" id="addMarker" onclick="add3DMarker()">添加标签</button>
+             <button class="button" id="addMarker" onclick="remove3DMarker()">移除标签</button>
+            <input type="radio" id="option-1" name="mode" class="bf_demo_radio" checked />
+            <label for="option-1" onclick="setType('image')"></label>
+            <span class="bf_demo_option_text">图片标签</span>
+            <input type="radio" id="option-2" name="mode" class="bf_demo_radio" />
+            <label for="option-2" onclick="setType('canvas')"></label>
+            <span class="bf_demo_option_text">Canvas标签</span>
+        </div>
+        <!-- 浮动面板：显示标签点击后的 bounding 信息 -->
+        <div id="infoPanel" class="floating-panel">
+            <div class="panel-header">
+                <span>Bounding 信息</span>
+                <button class="close-btn" onclick="hideInfoPanel()">×</button>
+            </div>
+            <pre id="boundingInfo"></pre>
+        </div>
+        <div id="markerListPanel" class="floating-list">
+            <div class="panel-header">
+                <span>标签列表</span>
+                <button class="close-btn" onclick="hideMarkerList()">×</button>
+            </div>
+            <ul id="markerList"></ul>
+        </div>
+        <!-- 定义DOM元素，用于在该DOM元素中显示模型或图纸 -->
+        <div class='model' id="domId"></div>
+    </div>
+
+    <script type="text/javascript">
+        let viewer3D;
+        let marker, canvas;
+        let markerType = 'image';
+        let viewToken = 'aa06be3f22f245468a0dc17c5a78ec67';
+        let persistedKey = '';
+        let markerStore = [];
+
+        // 配置JSSDK加载项
+        window.onload = function () {
+            let loaderConfig = new BimfaceSDKLoaderConfig();
+            loaderConfig.viewToken = viewToken;
+            BimfaceSDKLoader.load(loaderConfig, successCallback, failureCallback);
+        }
+
+        // 加载成功回调函数
+        function successCallback(viewMetaData) {
+            let dom4Show = document.getElementById('domId');
+            // 设置WebApplication3D的配置项
+            let webAppConfig = new Glodon.Bimface.Application.WebApplication3DConfig();
+            webAppConfig.domElement = dom4Show;
+             // 创建WebApplication3D，用以显示模型
+            app = new Glodon.Bimface.Application.WebApplication3D(webAppConfig);
+            app.addView(viewToken);
+            viewer3D = app.getViewer();
+            viewer3D.addEventListener(Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, function () {
+                viewAdded = true;
+                //三维标签的配置类
+                let markerConfig = new Glodon.Bimface.Plugins.Marker3D.Marker3DContainerConfig();
+                markerConfig.viewer = viewer3D;
+                marker = new Glodon.Bimface.Plugins.Marker3D.Marker3DContainer(markerConfig);
+                viewer3D.resize(document.documentElement.clientWidth, document.documentElement.clientHeight - 40);
+                viewer3D.render();
+                persistedKey = 'bim_markers_' + viewToken;
+                loadPersistedMarkers();
+            });
+        }
+
+        function failureCallback(error) {
+            console.log(error);
+        }
+
+        let isAddItemActivated = false;
+
+        function remove3DMarker() {
+            if (!viewAdded) {
+                return;
+            }
+            // 清空所有三维标签
+           this.clearItems();
+            viewer3D.render();
+            clearPersistedMarkers();
+            hideMarkerList();
+        }
+        function add3DMarker(type) {
+            if (!viewAdded) {
+                return;
+            }
+            if (isAddItemActivated) {
+                // 清空所有三维标签
+                viewer3D.removeEventListener(Glodon.Bimface.Viewer.Viewer3DEvent.MouseClicked, addItems);
+                setButtonText('addMarker', '创建标签');
+            } else {
+                // 添加点击监听事件，创建三维标签
+                viewer3D.addEventListener(Glodon.Bimface.Viewer.Viewer3DEvent.MouseClicked, addItems);
+                setButtonText('addMarker', '结束添加');
+            }
+            isAddItemActivated = !isAddItemActivated;
+            viewer3D.render();
+        }
+
+        //增加三维标签的方法
+        function addItems(objectData) {
+            var position = objectData.worldPosition;
+            let marker3dConfig = new Glodon.Bimface.Plugins.Marker3D.Marker3DConfig();
+            if (markerType == 'image') {
+                marker3dConfig.src = "https://mccsbc.obs.cn-east-3.myhuaweicloud.com/project/37/png/position-1763379644336.png";
+            } else if (markerType == 'canvas') {
+                if (!canvas) {
+                    canvas = createCanvas();
+                }
+                marker3dConfig.canvas = canvas;
+                marker3dConfig.size = 100;
+            }
+            marker3dConfig.worldPosition = position;
+            //三维标签的提示
+            marker3dConfig.tooltip = "This is 3DMarker.";
+            let marker3d = new Glodon.Bimface.Plugins.Marker3D.Marker3D(marker3dConfig);
+            bindMarkerClick(marker3d);
+            marker.addItem(marker3d);
+            if (markerType === 'image') {
+                persistMarkerItem({ type: 'image', position: position, src: marker3dConfig.src, tooltip: marker3dConfig.tooltip });
+            } else if (markerType === 'canvas') {
+                var dataUrl = canvas && canvas.toDataURL ? canvas.toDataURL() : '';
+                persistMarkerItem({ type: 'canvas', position: position, canvasDataUrl: dataUrl, size: marker3dConfig.size || 100, tooltip: marker3dConfig.tooltip });
+            }
+            renderMarkerList();
+            viewer3D.clearSelectedComponents();
+            viewer3D.render();
+        }
+
+        function createCanvas() {
+            let width = 2500;
+            let height = 800;
+            let canvas = document.createElement("canvas");
+            let ctx = canvas.getContext("2d");
+            canvas.width = width;
+            canvas.height = height;
+            ctx.fillStyle = "#32D3A6";
+            ctx.fillRect(0, 0, width, height);
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(35, 35, width - 70, height - 70);
+            ctx.fillStyle = '#32D3A6';
+            ctx.font = "200px Arial bolder";
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('开发BIM应用', canvas.width / 2, canvas.height / 2 - 160);
+            ctx.fillText('就用BIMFACE', canvas.width / 2, canvas.height / 2 + 160);
+            return canvas;
+        }
+
+        function clearItems() {
+            marker.clear();
+        }
+
+        function setType(type) {
+            markerType = type
+        }
+
+        function setButtonText(btnId, text) {
+            let dom = document.getElementById(btnId);
+            if (dom != null && dom.nodeName == "BUTTON") {
+                dom.innerText = text;
+            }
+        }
+
+        function showInfoPanel(data) {
+            var panel = document.getElementById('infoPanel');
+            var pre = document.getElementById('boundingInfo');
+            pre.textContent = JSON.stringify(data, null, 2);
+            panel.style.display = 'block';
+        }
+
+        function hideInfoPanel() {
+            var panel = document.getElementById('infoPanel');
+            panel.style.display = 'none';
+        }
+
+        function showMarkerList() { var p = document.getElementById('markerListPanel'); p.style.display = 'block'; }
+        function hideMarkerList() { var p = document.getElementById('markerListPanel'); p.style.display = 'none'; }
+
+        function bindMarkerClick(marker3d) {
+            marker3d.onClick(function (item) {
+                var m = item.position;
+                var num = 1.1;
+                var max = m.x * num;
+                var may = m.y * num;
+                var maz = m.z * num;
+                var mix = m.x / num;
+                var miy = m.y / num;
+                var miz = m.z / num;
+                var boundingBox = {
+                    max: { x: max, y: may, z: maz },
+                    min: { x: mix, y: miy, z: miz }
+                };
+                showInfoPanel(boundingBox);
+                viewer3D.getCamera().zoomToBoundingBox(boundingBox);
+            });
+        }
+
+        function persistMarkerItem(item) {
+            try {
+                markerStore.push(item);
+                item.createdAt = Date.now();
+                localStorage.setItem(persistedKey, JSON.stringify(markerStore));
+            } catch (e) {}
+        }
+
+        function clearPersistedMarkers() {
+            markerStore = [];
+            try {
+                localStorage.removeItem(persistedKey);
+            } catch (e) {}
+        }
+
+        function loadPersistedMarkers() {
+            try {
+                var raw = localStorage.getItem(persistedKey);
+                if (!raw) return;
+                markerStore = JSON.parse(raw) || [];
+            } catch (e) {
+                markerStore = [];
+            }
+            markerStore.forEach(function (item) {
+                var cfg = new Glodon.Bimface.Plugins.Marker3D.Marker3DConfig();
+                if (item.type === 'image' && item.src) {
+                    cfg.src = item.src;
+                } else if (item.type === 'canvas' && item.canvasDataUrl) {
+                    var c = document.createElement('canvas');
+                    c.width = 2500;
+                    c.height = 800;
+                    var ctx = c.getContext('2d');
+                    var img = new Image();
+                    img.onload = function () {
+                        ctx.drawImage(img, 0, 0, c.width, c.height);
+                        cfg.canvas = c;
+                        cfg.size = item.size || 100;
+                        cfg.worldPosition = item.position;
+                        cfg.tooltip = item.tooltip || '';
+                        var m = new Glodon.Bimface.Plugins.Marker3D.Marker3D(cfg);
+                        bindMarkerClick(m);
+                        marker.addItem(m);
+                        viewer3D.render();
+                    };
+                    img.src = item.canvasDataUrl;
+                }
+                if (item.type === 'image') {
+                    cfg.worldPosition = item.position;
+                    cfg.tooltip = item.tooltip || '';
+                    var m2 = new Glodon.Bimface.Plugins.Marker3D.Marker3D(cfg);
+                    bindMarkerClick(m2);
+                    marker.addItem(m2);
+                }
+            });
+            viewer3D.render();
+            renderMarkerList();
+            showMarkerList();
+        }
+
+        function renderMarkerList() {
+            var ul = document.getElementById('markerList');
+            if (!ul) return;
+            ul.innerHTML = '';
+            markerStore.forEach(function (item, idx) {
+                var li = document.createElement('li');
+                var p = item.position || { x: 0, y: 0, z: 0 };
+                var label = (item.type === 'image' ? '图片' : 'Canvas') + '标签 ' + (idx + 1) + ' [' + p.x.toFixed(2) + ',' + p.y.toFixed(2) + ',' + p.z.toFixed(2) + ']';
+                li.textContent = label;
+                li.onclick = function () { activateMarkerFromStore(idx); };
+                ul.appendChild(li);
+            });
+            showMarkerList();
+        }
+
+        function activateMarkerFromStore(index) {
+            var item = markerStore[index];
+            if (!item) return;
+            var cfg = new Glodon.Bimface.Plugins.Marker3D.Marker3DConfig();
+            if (item.type === 'image' && item.src) {
+                cfg.src = item.src;
+                cfg.worldPosition = item.position;
+                cfg.tooltip = item.tooltip || '';
+                var m = new Glodon.Bimface.Plugins.Marker3D.Marker3D(cfg);
+                bindMarkerClick(m);
+                marker.addItem(m);
+            } else if (item.type === 'canvas' && item.canvasDataUrl) {
+                var c = document.createElement('canvas');
+                c.width = 2500;
+                c.height = 800;
+                var ctx = c.getContext('2d');
+                var img = new Image();
+                img.onload = function () {
+                    ctx.drawImage(img, 0, 0, c.width, c.height);
+                    cfg.canvas = c;
+                    cfg.size = item.size || 100;
+                    cfg.worldPosition = item.position;
+                    cfg.tooltip = item.tooltip || '';
+                    var m = new Glodon.Bimface.Plugins.Marker3D.Marker3D(cfg);
+                    bindMarkerClick(m);
+                    marker.addItem(m);
+                    viewer3D.render();
+                    var bb = { max: { x: item.position.x * 1.1, y: item.position.y * 1.1, z: item.position.z * 1.1 }, min: { x: item.position.x / 1.1, y: item.position.y / 1.1, z: item.position.z / 1.1 } };
+                    showInfoPanel(bb);
+                    viewer3D.getCamera().zoomToBoundingBox(bb);
+                };
+                img.src = item.canvasDataUrl;
+                return;
+            }
+            viewer3D.render();
+            var bb = { max: { x: item.position.x * 1.1, y: item.position.y * 1.1, z: item.position.z * 1.1 }, min: { x: item.position.x / 1.1, y: item.position.y / 1.1, z: item.position.z / 1.1 } };
+            showInfoPanel(bb);
+            viewer3D.getCamera().zoomToBoundingBox(bb);
+        }
+
+    </script>
+</body>
+
+</html>

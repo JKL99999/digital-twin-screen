@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+
+<!-- 本DEMO中将演示如何在模型中嵌入图纸 -->
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>模型内嵌入图纸</title>
+    <style media="screen">
+        * {
+            margin: 0;
+            padding: 0
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+            width: 100%
+        }
+
+        .model {
+            flex: 1
+        }
+
+        .buttons {
+            font-size: 0;
+        }
+
+        .button {
+            margin: 5px 0 5px 5px;
+            width: 100px;
+            height: 30px;
+            border-radius: 3px;
+            border: none;
+            background: #32D3A6;
+            color: #FFFFFF;
+        }
+    </style>
+    <!-- 引用BIMFACE的JavaScript显示组件库 -->
+    <script src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js"
+        charset="utf-8"></script>
+</head>
+
+<body>
+    <div class='main'>
+        <div class='buttons'>
+            <button class="button" id="btnShowPlaneSheet" onclick="addPlaneSheet()">显示楼层平面</button>
+            <button class="button" id="btnShowSectionSheet" onclick="addSectionSheet()">显示建筑剖面</button>
+            <button class="button" id="btnShowElevationSheet" onclick="addElevationSheet()">显示建筑立面</button>
+        </div>
+        <!-- 定义DOM元素，用于在该DOM元素中显示模型或图纸 -->
+        <div class='model' id="domId"></div>
+    </div>
+    <script type="text/javascript">
+        let viewer3D;
+        let app;
+        let viewAdded = false;
+        let viewToken = '2415a7fd9c6442a7a8d0a10fca0561f5';
+        // 初始化显示组件
+        let options = new BimfaceSDKLoaderConfig();
+        options.viewToken = viewToken;
+        BimfaceSDKLoader.load(options, successCallback, failureCallback);
+        function successCallback(viewMetaData) {
+            if (viewMetaData.viewType == "3DView") {
+                // ======== 判断是否为3D模型 ========        
+                // 获取DOM元素
+                let dom4Show = document.getElementById('domId');
+                let webAppConfig = new Glodon.Bimface.Application.WebApplication3DConfig();
+                webAppConfig.domElement = dom4Show;
+                             // 创建WebApplication
+                app = new Glodon.Bimface.Application.WebApplication3D(webAppConfig);
+                // 添加待显示的模型
+                app.addView(viewToken);
+                // 从WebApplication获取viewer3D对象
+                viewer3D = app.getViewer();
+                // 监听添加view完成的事件
+                viewer3D.addEventListener(Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, function () {
+                    //自适应屏幕大小
+                    window.onresize = function () {
+                        viewer3D.resize(document.documentElement.clientWidth, document.documentElement.clientHeight - 40);
+                    }
+                    viewAdded = true;
+                    // 初始化RevitHelper
+                    initHelper();
+                    // 渲染3D模型
+                    viewer3D.render();
+                });
+            }
+        }
+        function failureCallback(error) {
+            console.log(error);
+        }
+        let helper = null;
+
+        let origin1 = null;
+        let direction1 = null;
+        let isPlaneSheetLoaded = false;
+        let isPlaneSheetActivated = false;
+        let planeSheetId = null;
+        // 嵌入平面图纸
+        function addPlaneSheet() {
+            let drawingId;
+            if (!helper) {
+                return;
+            }
+            if (isSectionSheetActivated) {
+                helper.hideDrawingsById([sectionSheetId]);
+                setButtonText('btnShowSectionSheet', '显示建筑剖面');
+                isSectionSheetActivated = false;
+            }
+            if (isElevationSheetLoaded) {
+                helper.hideDrawingsById([elevationSheetId]);
+                setButtonText('btnShowElevationSheet', '显示建筑立面');
+                isElevationSheetLoaded = false;
+            }
+            if (!isPlaneSheetLoaded) {
+                // 获取视图列表，并将其中的部分视图嵌入模型场景中
+                // 集成模型中，获取图纸列表的接口使用方式为 getDrawingList(fileId, callback)
+                let drawingIds = helper.getDrawingList();
+                planeSheetId = drawingIds[1].id;
+                origin1 = drawingIds[1].viewPort.origin;
+                direction1 = drawingIds[1].viewPort.viewDirection;
+                helper.addDrawingsById([planeSheetId], 1200, function (data) {
+                    helper.setDrawingsOpacityById([planeSheetId], 0.5);
+                    viewer3D.render();
+                    isPlaneSheetLoaded = true;
+                    setButtonText('btnShowPlaneSheet', '隐藏楼层平面');
+                    adjustPlane(origin1, direction1, 1700);
+                });
+            } else if (!isPlaneSheetActivated) {
+                helper.showDrawingsById([planeSheetId]);
+                viewer3D.render();
+                setButtonText('btnShowPlaneSheet', '隐藏楼层平面');
+                adjustPlane(origin1, direction1, 1700);
+            } else {
+                helper.hideDrawingsById([planeSheetId]);
+                sectionPlane.exit();
+                sectionPlane = null;
+                viewer3D.render();
+                setButtonText('btnShowPlaneSheet', '显示楼层平面');
+            }
+            isPlaneSheetActivated = !isPlaneSheetActivated;
+        }
+
+        let origin2 = null;
+        let direction2 = null;
+        let isSectionSheetLoaded = false;
+        let isSectionSheetActivated = false;
+        let sectionSheetId = null;
+        // 嵌入剖面图纸
+        function addSectionSheet() {
+            let drawingId;
+            if (!helper) {
+                return;
+            }
+            if (isPlaneSheetActivated) {
+                helper.hideDrawingsById([planeSheetId]);
+                setButtonText('btnShowPlaneSheet', '显示楼层平面');
+                isPlaneSheetActivated = false;
+            }
+            if (isElevationSheetLoaded) {
+                helper.hideDrawingsById([elevationSheetId]);
+                setButtonText('btnShowElevationSheet', '显示建筑立面');
+                isElevationSheetLoaded = false;
+            }
+            if (!isSectionSheetLoaded) {
+                // 获取视图列表，并将其中的部分视图嵌入模型场景中
+                // 集成模型中，获取图纸列表的接口使用方式为 getDrawingList(fileId, callback)
+               
+                let drawingIds = helper.getDrawingList();
+                sectionSheetId = drawingIds[10].id;
+                origin2 = drawingIds[10].viewPort.origin;
+                direction2 = drawingIds[10].viewPort.viewDirection;
+                helper.addDrawingsById([sectionSheetId], 0, function (data) {
+                    helper.setDrawingsOpacityById([sectionSheetId], 0.5);
+                    viewer3D.render();
+                    isSectionSheetLoaded = true;
+                    setButtonText('btnShowSectionSheet', '隐藏建筑剖面');
+                    adjustPlane(origin2, direction2, 500);
+                });
+            } else if (!isSectionSheetActivated) {
+                helper.showDrawingsById([sectionSheetId]);
+                viewer3D.render();
+                setButtonText('btnShowSectionSheet', '隐藏建筑剖面');
+                adjustPlane(origin2, direction2, 500);
+            } else {
+                helper.hideDrawingsById([sectionSheetId]);
+                sectionPlane.exit();
+                sectionPlane = null;
+                viewer3D.render();
+                setButtonText('btnShowSectionSheet', '显示建筑剖面');
+            }
+            isSectionSheetActivated = !isSectionSheetActivated;
+        }
+
+
+        let origin3 = null;
+        let direction3 = null;
+        let isElevationSheetLoaded = false;
+        let isElevationSheetActivated = false;
+        let elevationSheetId = null;
+        // 嵌入立面图纸
+        function addElevationSheet() {
+            let drawingId;
+            if (!helper) {
+                return;
+            }
+            if (isPlaneSheetActivated) {
+                helper.hideDrawingsById([planeSheetId]);
+                setButtonText('btnShowPlaneSheet', '显示楼层平面');
+                isPlaneSheetActivated = false;
+            }
+            if (isSectionSheetActivated) {
+                helper.hideDrawingsById([sectionSheetId]);
+                setButtonText('btnShowSectionSheet', '显示建筑剖面');
+                isSectionSheetActivated = false;
+            }
+            if (!isElevationSheetLoaded) {
+                // 获取视图列表，并将其中的部分视图嵌入模型场景中
+                // 集成模型中，获取图纸列表的接口使用方式为 getDrawingList(fileId, callback)
+                let drawingIds = helper.getDrawingList();
+                console.log(helper,"getDrawingList");
+                elevationSheetId = drawingIds[4].id;
+                origin3 = drawingIds[4].viewPort.origin;
+                direction3 = drawingIds[4].viewPort.viewDirection;
+                helper.addDrawingsById([elevationSheetId], 1200, function (data) {
+                    helper.setDrawingsOpacityById([elevationSheetId], 1);
+                    viewer3D.render();
+                    isElevationSheetLoaded = true;
+                    setButtonText('btnShowElevationSheet', '隐藏建筑立面');
+                    adjustPlane(origin3, direction3, 1700);
+                });
+            } else if (!isElevationSheetActivated) {
+                helper.showDrawingsById([elevationSheetId]);
+                viewer3D.render();
+                setButtonText('btnShowElevationSheet', '隐藏建筑立面');
+                adjustPlane(origin3, direction3, 1700);
+            } else {
+                helper.hideDrawingsById([elevationSheetId]);
+                sectionPlane.exit();
+                sectionPlane = null;
+                viewer3D.render();
+                setButtonText('btnShowElevationSheet', '显示建筑立面');
+            }
+            isElevationSheetActivated = !isElevationSheetActivated;
+        }
+
+
+        function initHelper() {
+            if (!viewAdded) {
+                return;
+            }
+            // 模型转换时，config设置参数 'exportViewImage': True，用以导出模型内的平、立、剖视图
+            if (!helper) {
+                // 创建针对Revit中图纸相关功能的对象
+                let helperConfig = new Glodon.Bimface.Plugins.RevitHelpers.DrawingHelperConfig();
+                helperConfig.viewer = viewer3D;
+                helper = new Glodon.Bimface.Plugins.RevitHelpers.DrawingHelper(helperConfig);
+            }
+        }
+
+        let sectionPlane = null;
+        function initSectionPlane() {
+            if (!viewAdded) {
+                return;
+            }
+            if (!sectionPlane) {
+                let sectionPlaneConfig = new Glodon.Bimface.Plugins.Section.SectionPlaneConfig();
+                sectionPlaneConfig.viewer = viewer3D;
+                sectionPlane = new Glodon.Bimface.Plugins.Section.SectionPlane(sectionPlaneConfig);
+                console.log('success');
+            }
+        }
+
+        function adjustPlane(pos, dir, offset) {
+            initSectionPlane();
+            sectionPlane.setPositionByPlane(pos, dir, offset);
+            sectionPlane.hidePlane();
+            viewer3D.render();
+        }
+
+        // ************************** 按钮文字 **************************
+        function setButtonText(btnId, text) {
+            let dom = document.getElementById(btnId);
+            if (dom != null && dom.nodeName == "BUTTON") {
+                dom.innerText = text;
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>立体锚点</title>
+    <style media="screen">
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        .model {
+            height: calc(100% - 40px);
+            width: 100%;
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+    </style>
+    <script src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js"></script>
+</head>
+
+<body>
+    <div class='main'>
+        <!-- 定义DOM元素，用于在该DOM元素中显示模型或图纸 -->
+        <div class='model' id="domId"></div>
+    </div>
+    <script type="text/javascript">
+        // 声明 viewer 及 app
+        let viewer, app;
+        // 声明 UI管理器、主工具条、图层管理器、标签管理器
+        let uiMng, mainToolbar, layerMng;
+
+        // 球体场景的viewToken
+        const viewToken = '7dfc45aae25c4f86b6b261d9972010dd';
+
+
+        // 初始化SDKLoader
+        let BimfaceLoaderConfig = new BimfaceSDKLoaderConfig();
+        BimfaceLoaderConfig.viewToken = viewToken;
+
+        BimfaceSDKLoader.load(BimfaceLoaderConfig, onSDKLoadSucceeded, onSDKLoadFailed);
+
+        // 资源加载成功的回调函数
+        function onSDKLoadSucceeded(viewMetaData) {
+
+            // 构造app
+            let dom4Show = document.getElementById('domId');
+            let webAppConfig = new Glodon.Bimface.Earth.Application.WebApplicationGISConfig();
+            webAppConfig.domElement = dom4Show;
+
+            app = new Glodon.Bimface.Earth.Application.WebApplicationGIS(webAppConfig);
+
+            // 获取viewer对象并加载场景
+            viewer = app.getViewer();
+            viewer.addScene(viewToken);
+
+            // 场景加载的监听事件，场景加载后可获取图层管理器对象，进行图层添加等操作
+            viewer.addEventListener(Glodon.Bimface.Earth.Viewer.ViewerGISEvent.SceneAdded, function () {
+                // 获取图层管理器
+                layerMng = viewer.getLayerManager();
+                // 获取UI管理器
+                uiMng = app.getUIManager();
+                // 获取主工具条
+                mainToolbar = uiMng.getToolbar('MainToolbar');
+              
+
+                console.log(mainToolbar,"mainToolbar");
+                // 设置相机视角
+                viewer.getCamera().setStatus({
+                  orientation:{pitch:-0.20596706733438652,yaw:1.525876496491489,roll:0},
+                  position:{lat:31.24127100358249,lon:121.47937970244209,alt:188.647}
+                });
+
+                // 添加锚点效果
+                addAnchor();
+            });
+
+            // 图层初始化完成的监听事件，可获取对应图层进行构件状态等设置
+            viewer.addEventListener(Glodon.Bimface.Earth.Viewer.ViewerGISEvent.LayerAdded, function (data) {
+              console.log(data);
+              if(data.layerId == 'layer_10000956221857')
+                // 选中指定构件
+                layerMng.getLayer('layer_10000956221857').getComponentManager().select({ids:['66660c50-75a9-4c29-8618-d1e4adf5d527']});
+            });
+
+        }
+
+        // 资源加载失败的回调函数
+        function onSDKLoadFailed(error) {
+            console.log(error);
+        }
+
+
+        // 添加立体锚点效果
+        function addAnchor() {
+          if (!viewer) {
+              return;
+          }
+          
+          // 构造锚点配置项
+          let config = new Glodon.Bimface.Earth.Plugins.Animation.AnchorConfig();
+          config.viewer= viewer;
+          config.size = 350;
+          // 设置锚点位置
+          config.location= {lat: 31.241456840196236, lon: 121.48250954380549, alt: 108};
+
+          let anchor = new Glodon.Bimface.Earth.Plugins.Animation.Anchor(config);
+          viewer.render();
+        }
+
+
+    </script>
+</body>
+
+</html>

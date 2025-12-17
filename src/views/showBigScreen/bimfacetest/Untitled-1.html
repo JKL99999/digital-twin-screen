@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charegionalViewet="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>曝光度</title>
+    <style media="screen">
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+
+      .main {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        height: 100%;
+        width: 100%;
+      }
+
+      .model {
+        flex: 1;
+      }
+    </style>
+    <!-- 引用BIMFACE的JavaScript显示组件库 -->
+    <script
+      src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js"
+      charegionalViewet="utf-8"
+    ></script>
+  </head>
+
+  <body>
+    <div class="main">
+      <!-- 定义DOM元素，用于在该DOM元素中显示模型或图纸 -->
+      <div class="model" id="domId"></div>
+    </div>
+    <script type="text/javascript">
+      // 声明 viewer 及 app
+      let viewer, app;
+      // 声明 UI管理器、主工具条、自定义工具条、图层管理器
+      let uiMng, mainToolbar, toolbar, layerMng;
+      let viewToken = '6f92badebf2e4b3e8a83114a0e8ec125';
+      // 初始化SDKLoader
+      let BimfaceLoaderConfig = new BimfaceSDKLoaderConfig();
+      BimfaceLoaderConfig.viewToken = viewToken;
+      BimfaceSDKLoader.load(
+        BimfaceLoaderConfig,
+        onSDKLoadSucceeded,
+        onSDKLoadFailed
+      );
+
+      // 资源加载成功的回调函数
+      function onSDKLoadSucceeded(viewMetaData) {
+        // 构造app
+        let dom4Show = document.getElementById("domId");
+        let webAppConfig =
+          new Glodon.Bimface.Application.WebApplicationGISConfig();
+
+        webAppConfig.domElement = dom4Show;
+        app = new Glodon.Bimface.Application.WebApplicationGIS(webAppConfig);
+
+        // 获取viewer并加载场景
+        viewer = app.getViewer();
+        viewer.addScene(viewToken);
+        // 场景加载的监听事件，场景加载后获取主工具条、管理器等对象，并添加场景效果
+        viewer.addEventListener(
+          Glodon.Bimface.Viewer.ViewerGISEvent.SceneAdded,
+          function () {
+            // 获取图层管理器
+            layerMng = viewer.getLayerManager();
+            console.log("图层管理器",layerMng)
+            // 获取UI管理器
+            uiMng = app.getUIManager();
+            // 获取主工具条
+            mainToolbar = uiMng.getToolbar("MainToolbar");
+            // 添加自定义工具条
+            addToolbar();
+          }
+        );
+      }
+
+      // 资源加载失败的回调函数
+      function onSDKLoadFailed(error) {
+        console.log(error);
+      }
+
+      // 添加自定义工具条
+      function addToolbar() {
+        // 构造自定义工具条对象
+        toolbar = new Glodon.Bimface.Tiles.UI.Toolbar({
+          id: "toolbar", // 工具条ID
+          isHorizontal: true, // 工具条的方向，可设置为水平或垂直
+          controlAlign: Glodon.Bimface.Tiles.UI.ControlAlignOption.BottomCenter, // 按钮在工具条中的对齐方式，当前设置为居中
+        });
+        // 在工具条中添加BIMLayer、FeatureLayer、场景保管设置按钮
+        toolbar.addControl(addBIMLayerExposure(), { index: 1 });
+        toolbar.addControl(addViewerExposure(), { index: 2 });
+        // 将工具条添加至UI管理器中，并设置工具条在div中的位置，这里设置了底部居中并向上偏移20px
+        uiMng.addControl(toolbar, {
+          position: {
+            anchor: Glodon.Bimface.Tiles.UI.ControlAnchor.BottomCenter,
+            offset: { x: 0, y: -20 },
+          },
+        });
+      }
+
+      // 添加BIMLayer曝光设置按钮
+      function addBIMLayerExposure() {
+        // 构造按钮
+        btn_setBIMLayerExposure = new Glodon.Bimface.Tiles.UI.Button({
+          id: "btn_setBIMLayerExposure",
+          text: "图层曝光增强",
+        });
+        // 设置按钮的点击事件
+        btn_setBIMLayerExposure.onClick(function () {
+          let bimLayer = layerMng.getLayer("layer_10000750686985");
+          console.log("bimLayer",bimLayer);
+          //获取图层的曝光补偿值进行判断
+          if (bimLayer.getExposureCompensation() <= 0) {
+            //BIMLayer、FeatureLayer均支持设置场景曝光补偿，补偿量范围为[-1, 1]，默认为0，正值代表增加曝光，负值代表减少曝光
+            bimLayer.setExposureCompensation(0.75);
+            btn_setBIMLayerExposure.setText("图层曝光减弱");
+          } else {
+            bimLayer.setExposureCompensation(-0.75);
+            btn_setBIMLayerExposure.setText("图层曝光增强");
+          }
+          viewer.render();
+        });
+        return btn_setBIMLayerExposure;
+      }
+
+      // 添加场景曝光设置按钮
+      function addViewerExposure() {
+        // 构造按钮
+        btn_setViewerExposure = new Glodon.Bimface.Tiles.UI.Button({
+          id: "btn_setViewerExposure",
+          text: "场景曝光增强",
+        });
+        // 设置按钮的点击事件
+        btn_setViewerExposure.onClick(function () {
+          //获取图层的曝光补偿值进行判断
+          switch (btn_setViewerExposure.getText()) {
+            case "场景曝光增强":
+              //BIMLayer、FeatureLayer均支持设置场景曝光补偿，补偿量范围为[-1, 1]，默认为0，正值代表增加曝光，负值代表减少曝光
+              viewer.setExposureCompensation(0.75);
+              btn_setViewerExposure.setText("场景曝光减弱");
+              btn_setBIMLayerExposure.setText("图层曝光减弱");
+
+              break;
+            case "场景曝光减弱":
+              viewer.setExposureCompensation(-0.2);
+              btn_setViewerExposure.setText("场景曝光增强");
+              btn_setBIMLayerExposure.setText("图层曝光增强");
+
+              break;
+          }
+          viewer.render();
+        });
+        return btn_setViewerExposure;
+      }
+
+      function onSDKLoadFailed(error) {}
+    </script>
+  </body>
+</html>

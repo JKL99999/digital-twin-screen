@@ -1,0 +1,33 @@
+<html>
+    <head>
+        <title>demo001</title>
+        <style>
+            /* 代码编写区域 */
+            .main {
+                border: 1px solid #000;
+                width: 100%;
+                height: auto;
+                display: flex;
+                box-sizing: border-box;
+            }
+            .box1 {
+                width: 100px;
+                height: 100px;
+                background-color: pink;
+                margin-right: 20px; /* box1 与 box2 间距 */
+                flex: 0 0 100px;
+            }
+            .box2 {
+                height: 200px;
+                background-color: skyblue;
+                flex: 1 1 auto; /* 宽度自适应，填充剩余空间 */
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main">
+            <div class="box1"></div>
+            <div class="box2"></div>
+        </div>
+    </body>
+</html>
