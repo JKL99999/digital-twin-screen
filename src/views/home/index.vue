@@ -175,14 +175,13 @@
     <!-- Footer -->
     <div class="footer">
   <div class="footer-tabs">
-    <!-- 移除了里面的 <img> 标签 -->
-    <div class="footer-tab"></div>
-    <div class="footer-tab"></div>
-    <div class="footer-tab"></div>
-    <div class="footer-tab"></div>
-    <div class="footer-tab"></div>
-    <div class="footer-tab"></div>
-  </div>
+  <div class="footer-tab" :class="{ active: activeFooterIndex === 0 }" @click="setActiveTab(0)"></div>
+  <div class="footer-tab" :class="{ active: activeFooterIndex === 1 }" @click="setActiveTab(1)"></div>
+  <div class="footer-tab" :class="{ active: activeFooterIndex === 2 }" @click="setActiveTab(2)"></div>
+  <div class="footer-tab" :class="{ active: activeFooterIndex === 3 }" @click="setActiveTab(3)"></div>
+  <div class="footer-tab" :class="{ active: activeFooterIndex === 4 }" @click="setActiveTab(4)"></div>
+  <div class="footer-tab" :class="{ active: activeFooterIndex === 5 }" @click="setActiveTab(5)"></div>
+</div>
 </div>
 
   </div>
@@ -206,8 +205,14 @@ export default {
         { title: '四标 - B区', percent: '95.29%', current: 243, total: 255 },
         { title: '五标 - A区', percent: '95.72%', current: 604, total: 631 },
         { title: '五标 - B区', percent: '98.78%', current: 974, total: 986 }
-      ]
+      ],
+      activeFooterIndex:0
     };
+  },
+  methods:{
+    setActiveTab(num){
+      this.activeFooterIndex=num;
+    }
   }
 };
 </script>
@@ -242,12 +247,12 @@ $font-family: "Microsoft YaHei", sans-serif;
 
 /* --- Header --- */
 .header {
-  height: 80px;
+  height: 100px;
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: url('data:image/svg+xml;utf8,<svg ...>') no-repeat center top; /* Placeholder for complex bg */
+  background-image: url('~@/assets/img/headerBg.png');
   border-bottom: 2px solid $border-blue;
   position: relative;
   box-shadow: 0 0 20px rgba(0, 150, 255, 0.2);
@@ -275,18 +280,26 @@ $font-family: "Microsoft YaHei", sans-serif;
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    top: 0;
+    top: 20px;
     
-    .title {
-      font-size: 28px;
-      font-weight: bold;
-      letter-spacing: 2px;
-      text-shadow: 0 0 10px $accent-blue;
-      margin-top: 10px;
-      background: linear-gradient(to bottom, #fff, #8ec5fc);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
+      .title {
+  font-family: Source Han Sans CN, Source Han Sans CN;
+  font-weight: 800;
+  font-size: 32px;
+  line-height: 40px;
+  text-shadow: 0px 2px 4px rgba(14, 26, 42, 0.4);
+  text-align: center;
+  font-style: normal;
+  text-transform: none;
+  
+  /* --- 关键修改部分 --- */
+  background: linear-gradient(90deg, #FFFFFF 0%, #C0EBFF 35%, #179FDE 100%);
+  -webkit-background-clip: text; /* 将背景裁剪到文字上 */
+  background-clip: text;         /* 标准写法 */
+  color: transparent;            /* 必须让文字颜色透明，才能看到底下的背景渐变 */
+  /* -------------------- */
+}
+    
   }
 
   .exit-btn {
@@ -639,8 +652,9 @@ $font-family: "Microsoft YaHei", sans-serif;
 
 /* --- Footer --- */
 .footer {
-  height: 60px;
-  display: flex;
+  height: 100px;
+  background-image: url('~@/assets/img/footerBg.png');
+  display: flex; 
   justify-content: center;
   align-items: flex-end;
   padding-bottom: 0;
@@ -671,7 +685,7 @@ $font-family: "Microsoft YaHei", sans-serif;
 .footer-tab:nth-child(2) {
   //基础样2
   width: 219px;
-  height: 75px;
+  height: 82px;
   cursor: pointer;
   /* 设置默认状态的背景图片 */
   background-image: url('~@/assets/img/footer_btn02.png');
@@ -685,7 +699,7 @@ $font-family: "Microsoft YaHei", sans-serif;
 .footer-tab:nth-child(3) {
   //基础样式
   width: 219px;
-  height: 75px;
+  height: 89px;
   cursor: pointer;
   /* 设置默认状态的背景图片 */
   background-image: url('~@/assets/img/footer_btn03.png');
@@ -699,7 +713,7 @@ $font-family: "Microsoft YaHei", sans-serif;
 .footer-tab:nth-child(4) {
   //基础样式
   width: 219px;
-  height: 75px;
+  height: 89px;
   cursor: pointer;
   /* 设置默认状态的背景图片 */
   background-image: url('~@/assets/img/footer_btn04.png');
@@ -713,7 +727,7 @@ $font-family: "Microsoft YaHei", sans-serif;
 .footer-tab:nth-child(5) {
   //基础样式
   width: 219px;
-  height: 75px;
+  height: 82px;
   cursor: pointer;
   /* 设置默认状态的背景图片 */
   background-image: url('~@/assets/img/footer_btn05.png');
