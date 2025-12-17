@@ -18,7 +18,6 @@
     </header>
 
     <div class="main-body">
-      
       <aside class="left-panel">
         <div class="panel-tabs">
           <div class="tab active">开累完成</div>
@@ -40,11 +39,18 @@
               </div>
             </div>
             <div class="chart-bars">
-              <div class="bar-row" v-for="(item, index) in progressData" :key="index">
+              <div
+                class="bar-row"
+                v-for="(item, index) in progressData"
+                :key="index"
+              >
                 <div class="row-label">{{ item.name }}</div>
                 <div class="row-bar-area">
                   <div class="bar-bg">
-                    <div class="bar-fill" :style="{ width: item.percent }"></div>
+                    <div
+                      class="bar-fill"
+                      :style="{ width: item.percent }"
+                    ></div>
                   </div>
                   <div class="row-value">{{ item.value }}</div>
                 </div>
@@ -62,7 +68,8 @@
             <div class="card-body">
               <div class="percent">{{ card.percent }}</div>
               <div class="fraction">
-                <span class="curr">{{ card.current }}</span>/<span class="total">{{ card.total }}</span>
+                <span class="curr">{{ card.current }}</span
+                >/<span class="total">{{ card.total }}</span>
               </div>
             </div>
           </div>
@@ -146,27 +153,27 @@
 
 <script>
 export default {
-  name: 'Home',
+  name: "Home",
   data() {
     return {
       // 模拟左侧进度条数据
       progressData: [
-        { name: '三标', value: '1331/1343', percent: '99%' },
-        { name: '四标', value: '1458/1521', percent: '96%' },
-        { name: '五标', value: '1331/1343', percent: '99%' },
-        { name: '六标', value: '1458/1521', percent: '96%' }
+        { name: "三标", value: "1331/1343", percent: "99%" },
+        { name: "四标", value: "1458/1521", percent: "96%" },
+        { name: "五标", value: "1331/1343", percent: "99%" },
+        { name: "六标", value: "1458/1521", percent: "96%" },
       ],
       // 模拟左侧 Grid 数据
       zoneData: [
-        { title: '三标 - A区', percent: '98.78%', current: 974, total: 986 },
-        { title: '三标 - B区', percent: '98.78%', current: 611, total: 635 },
-        { title: '四标 - A区', percent: '100%', current: 357, total: 357 },
-        { title: '四标 - B区', percent: '95.29%', current: 243, total: 255 },
-        { title: '五标 - A区', percent: '95.72%', current: 604, total: 631 },
-        { title: '五标 - B区', percent: '98.78%', current: 974, total: 986 }
-      ]
+        { title: "三标 - A区", percent: "98.78%", current: 974, total: 986 },
+        { title: "三标 - B区", percent: "98.78%", current: 611, total: 635 },
+        { title: "四标 - A区", percent: "100%", current: 357, total: 357 },
+        { title: "四标 - B区", percent: "95.29%", current: 243, total: 255 },
+        { title: "五标 - A区", percent: "95.72%", current: 604, total: 631 },
+        { title: "五标 - B区", percent: "98.78%", current: 974, total: 986 },
+      ],
     };
-  }
+  },
 };
 </script>
 
@@ -207,14 +214,16 @@ $header-gradient-end: #051224;
     justify-content: space-between;
     align-items: center;
     padding: 0 20px;
-    background: url('data:image/svg+xml;utf8,<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><path d="M0,0 L100%,0 L100%,50 L80%,70 L20%,70 L0,50 Z" fill="rgba(10,42,77,0.5)"/></svg>') no-repeat center top;
+    background: url('data:image/svg+xml;utf8,<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><path d="M0,0 L100%,0 L100%,50 L80%,70 L20%,70 L0,50 Z" fill="rgba(10,42,77,0.5)"/></svg>')
+      no-repeat center top;
     background-size: 100% 100%;
     border-bottom: 2px solid $border-color;
     box-shadow: 0 0 15px rgba(0, 234, 255, 0.2);
     position: relative;
     z-index: 10;
 
-    .header-left, .header-right {
+    .header-left,
+    .header-right {
       display: flex;
       align-items: center;
       gap: 15px;
@@ -236,7 +245,12 @@ $header-gradient-end: #051224;
       .title-decoration {
         height: 2px;
         width: 100%;
-        background: linear-gradient(90deg, transparent, $neon-blue, transparent);
+        background: linear-gradient(
+          90deg,
+          transparent,
+          $neon-blue,
+          transparent
+        );
         margin-top: 5px;
       }
     }
@@ -247,7 +261,10 @@ $header-gradient-end: #051224;
       color: $text-white;
       padding: 4px 12px;
       cursor: pointer;
-      &:hover { background: $neon-blue; color: #000; }
+      &:hover {
+        background: $neon-blue;
+        color: #000;
+      }
     }
   }
 
@@ -279,9 +296,15 @@ $header-gradient-end: #051224;
         background: rgba(12, 36, 65, 0.5);
         border: 1px solid $border-color;
         cursor: pointer;
-        clip-path: polygon(10% 0, 100% 0, 100% 100%, 0% 100%, 0% 25%); // 模拟梯形切角
+        clip-path: polygon(
+          10% 0,
+          100% 0,
+          100% 100%,
+          0% 100%,
+          0% 25%
+        ); // 模拟梯形切角
         font-size: 13px;
-        
+
         &.active {
           background: rgba(0, 234, 255, 0.2);
           border-color: $neon-blue;
@@ -296,13 +319,26 @@ $header-gradient-end: #051224;
       border: 1px solid $border-color;
       padding: 10px;
       position: relative;
-      &::before { /* 模拟边框四个角的装饰 */
-        content: ''; position: absolute; top: -1px; left: -1px; width: 10px; height: 10px;
-        border-top: 2px solid $neon-blue; border-left: 2px solid $neon-blue;
+      &::before {
+        /* 模拟边框四个角的装饰 */
+        content: "";
+        position: absolute;
+        top: -1px;
+        left: -1px;
+        width: 10px;
+        height: 10px;
+        border-top: 2px solid $neon-blue;
+        border-left: 2px solid $neon-blue;
       }
       &::after {
-        content: ''; position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px;
-        border-bottom: 2px solid $neon-blue; border-right: 2px solid $neon-blue;
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        right: -1px;
+        width: 10px;
+        height: 10px;
+        border-bottom: 2px solid $neon-blue;
+        border-right: 2px solid $neon-blue;
       }
 
       .section-title {
@@ -312,10 +348,10 @@ $header-gradient-end: #051224;
         border-left: 3px solid $neon-blue;
         padding-left: 8px;
         margin-bottom: 10px;
-        background: linear-gradient(90deg, rgba(0,234,255,0.1), transparent);
+        background: linear-gradient(90deg, rgba(0, 234, 255, 0.1), transparent);
         display: flex;
         justify-content: space-between;
-        
+
         .sub-info {
           font-size: 12px;
           color: $text-label;
@@ -328,7 +364,7 @@ $header-gradient-end: #051224;
     .section-progress .progress-content {
       display: flex;
       align-items: center;
-      
+
       .chart-donut {
         width: 100px;
         text-align: center;
@@ -345,18 +381,38 @@ $header-gradient-end: #051224;
           justify-content: center;
           align-items: center;
           margin: 0 auto;
-          box-shadow: 0 0 10px rgba(0,234,255,0.2);
+          box-shadow: 0 0 10px rgba(0, 234, 255, 0.2);
 
-          .percent { font-size: 14px; font-weight: bold; }
-          .label { font-size: 10px; color: $text-label; }
+          .percent {
+            font-size: 14px;
+            font-weight: bold;
+          }
+          .label {
+            font-size: 10px;
+            color: $text-label;
+          }
         }
         .legend {
           font-size: 10px;
           margin-top: 5px;
-          .item { display: flex; align-items: center; gap: 4px; color: $text-label; justify-content: center;}
-          .dot { width: 6px; height: 6px; display: block; }
-          .dot.blue { background: $neon-blue; }
-          .dot.gray { background: #666; }
+          .item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: $text-label;
+            justify-content: center;
+          }
+          .dot {
+            width: 6px;
+            height: 6px;
+            display: block;
+          }
+          .dot.blue {
+            background: $neon-blue;
+          }
+          .dot.gray {
+            background: #666;
+          }
         }
       }
 
@@ -368,15 +424,36 @@ $header-gradient-end: #051224;
           align-items: center;
           font-size: 12px;
           margin-bottom: 6px;
-          .row-label { width: 30px; color: $text-label; }
+          .row-label {
+            width: 30px;
+            color: $text-label;
+          }
           .row-bar-area {
             flex: 1;
             margin: 0 5px;
-            .bar-bg { height: 6px; background: #0d2a46; border-radius: 3px; overflow: hidden; }
-            .bar-fill { height: 100%; background: $neon-blue; box-shadow: 0 0 5px $neon-blue; }
-            .row-value { font-size: 10px; text-align: right; color: #fff; transform: scale(0.9); }
+            .bar-bg {
+              height: 6px;
+              background: #0d2a46;
+              border-radius: 3px;
+              overflow: hidden;
+            }
+            .bar-fill {
+              height: 100%;
+              background: $neon-blue;
+              box-shadow: 0 0 5px $neon-blue;
+            }
+            .row-value {
+              font-size: 10px;
+              text-align: right;
+              color: #fff;
+              transform: scale(0.9);
+            }
           }
-          .row-percent { width: 30px; text-align: right; color: $neon-blue; }
+          .row-percent {
+            width: 30px;
+            text-align: right;
+            color: $neon-blue;
+          }
         }
       }
     }
@@ -386,16 +463,16 @@ $header-gradient-end: #051224;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
-      
+
       .mini-card {
         background: rgba(12, 36, 65, 0.4);
         border: 1px solid rgba(30, 79, 122, 0.5);
         padding: 8px;
-        
+
         .card-header {
           font-size: 12px;
           color: $text-label;
-          border-bottom: 1px solid rgba(255,255,255,0.1);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
           padding-bottom: 4px;
           margin-bottom: 4px;
         }
@@ -403,8 +480,18 @@ $header-gradient-end: #051224;
           display: flex;
           justify-content: space-between;
           align-items: flex-end;
-          .percent { color: $neon-blue; font-size: 16px; font-weight: bold; }
-          .fraction { font-size: 12px; color: #aaa; .curr { color: $neon-blue; }}
+          .percent {
+            color: $neon-blue;
+            font-size: 16px;
+            font-weight: bold;
+          }
+          .fraction {
+            font-size: 12px;
+            color: #aaa;
+            .curr {
+              color: $neon-blue;
+            }
+          }
         }
       }
     }
@@ -417,9 +504,19 @@ $header-gradient-end: #051224;
         table {
           width: 100%;
           border-collapse: collapse;
-          th { text-align: left; color: $text-label; padding: 5px; border-bottom: 1px solid $border-color; }
-          td { padding: 6px 5px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-          .highlight { color: $neon-blue; }
+          th {
+            text-align: left;
+            color: $text-label;
+            padding: 5px;
+            border-bottom: 1px solid $border-color;
+          }
+          td {
+            padding: 6px 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          }
+          .highlight {
+            color: $neon-blue;
+          }
         }
       }
     }
@@ -430,8 +527,8 @@ $header-gradient-end: #051224;
     flex: 1;
     position: relative;
     border: 1px solid $border-color;
-    background: rgba(0,0,0,0.2);
-    
+    background: rgba(0, 0, 0, 0.2);
+
     /* 搜索栏 */
     .search-bar {
       position: absolute;
@@ -440,7 +537,7 @@ $header-gradient-end: #051224;
       display: flex;
       z-index: 10;
       input {
-        background: rgba(0,0,0,0.5);
+        background: rgba(0, 0, 0, 0.5);
         border: 1px solid $border-color;
         color: #fff;
         padding: 6px 10px;
@@ -510,7 +607,7 @@ $header-gradient-end: #051224;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
+      background: rgba(0, 0, 0, 0.6);
       border: 1px solid $border-color;
       display: flex;
       padding: 5px 15px;
@@ -521,7 +618,10 @@ $header-gradient-end: #051224;
         font-size: 18px;
         cursor: pointer;
         transition: transform 0.2s;
-        &:hover { transform: scale(1.2); color: $neon-blue; }
+        &:hover {
+          transform: scale(1.2);
+          color: $neon-blue;
+        }
       }
     }
 
@@ -530,12 +630,15 @@ $header-gradient-end: #051224;
       width: 100%;
       height: 100%;
       /* 创建点阵背景效果 */
-      background-image: radial-gradient(rgba(0, 234, 255, 0.2) 1px, transparent 1px);
+      background-image: radial-gradient(
+        rgba(0, 234, 255, 0.2) 1px,
+        transparent 1px
+      );
       background-size: 20px 20px;
       display: flex;
       justify-content: center;
       align-items: center;
-      
+
       /* 模拟中间那个发光的图形 */
       .map-shape {
         width: 60%;
@@ -545,13 +648,14 @@ $header-gradient-end: #051224;
         clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%); /* 梯形 */
         box-shadow: 0 0 50px rgba(0, 234, 255, 0.1);
         position: relative;
-        
+
         &::after {
           content: "MAP ZONE";
           position: absolute;
-          top: 50%; left: 50%;
+          top: 50%;
+          left: 50%;
           transform: translate(-50%, -50%);
-          color: rgba(255,255,255,0.1);
+          color: rgba(255, 255, 255, 0.1);
           font-size: 40px;
           font-weight: bold;
         }
@@ -584,12 +688,17 @@ $header-gradient-end: #051224;
       font-weight: bold;
       transition: all 0.3s;
 
-      &:hover, &.active {
-        background: linear-gradient(180deg, rgba(12,36,65,0.9), rgba(0,234,255,0.3));
+      &:hover,
+      &.active {
+        background: linear-gradient(
+          180deg,
+          rgba(12, 36, 65, 0.9),
+          rgba(0, 234, 255, 0.3)
+        );
         border-color: $neon-blue;
         border-bottom-color: $neon-blue;
         color: #fff;
-        box-shadow: 0 0 15px rgba(0,234,255,0.3);
+        box-shadow: 0 0 15px rgba(0, 234, 255, 0.3);
       }
     }
   }

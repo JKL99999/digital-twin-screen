@@ -1,55 +1,101 @@
 <template>
   <div class="login-container">
-    <div class="background-layer"></div>
+    <div class="background-layer" />
 
     <header class="header-section">
       <div class="logo-area">
-        <img src="@/assets/img/logo.png" alt="">
-        <h1 class="main-title">浦东机场T3航站区港湾机坪工程可视化辅助管理系统</h1>
+        <img src="@/assets/img/logo.png" alt="" />
+        <h1 class="main-title">
+          浦东机场T3航站区港湾机坪工程可视化辅助管理系统
+        </h1>
       </div>
     </header>
 
     <main class="login-box">
       <h2 class="login-title">账号登录</h2>
 
-      <form @submit.prevent="handleLogin" class="login-form">
+      <form class="login-form" @submit.prevent="handleLogin">
         <div class="input-group">
           <span class="icon-slot">
-            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              stroke="currentColor"
+              stroke-width="2"
+              fill="none"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
           </span>
-          <input 
-            type="text" 
-            v-model="loginForm.username" 
-            placeholder="用户名" 
+          <input
+            v-model="loginForm.username"
+            type="text"
+            placeholder="用户名"
             autocomplete="off"
           />
         </div>
 
         <div class="input-group">
           <span class="icon-slot">
-            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              stroke="currentColor"
+              stroke-width="2"
+              fill="none"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
           </span>
-          <input 
+          <input
+            v-model="loginForm.password"
             :type="passwordVisible ? 'text' : 'password'"
-            v-model="loginForm.password" 
-            placeholder="密码" 
+            placeholder="密码"
             autocomplete="off"
           />
           <span class="toggle-slot" @click="passwordVisible = !passwordVisible">
-            <svg v-if="passwordVisible" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
+            <svg
+              v-if="passwordVisible"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              stroke="currentColor"
+              stroke-width="2"
+              fill="none"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
             </svg>
-            <svg v-else viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-              <line x1="1" y1="1" x2="23" y2="23"></line>
+            <svg
+              v-else
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              stroke="currentColor"
+              stroke-width="2"
+              fill="none"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+              />
+              <line x1="1" y1="1" x2="23" y2="23" />
             </svg>
           </span>
         </div>
 
-        <button type="submit" class="submit-btn">
-          登录
-        </button>
+        <button type="submit" class="submit-btn">登录</button>
       </form>
     </main>
   </div>
@@ -57,34 +103,37 @@
 
 <script>
 export default {
-  name: 'Login',
+  name: "Login",
   data() {
     return {
       // 修改点 3: 增加控制密码显示的状态
       passwordVisible: false,
       loginForm: {
-        username: '',
-        password: ''
-      }
+        username: "",
+        password: "",
+      },
     };
   },
   methods: {
     handleLogin() {
-      if(this.loginForm.username==="admin" &&this.loginForm.password==="ABC123456"){
+      if (
+        this.loginForm.username === "admin" &&
+        this.loginForm.password === "ABC123456"
+      ) {
         this.$router.push("/zhuang");
-         this.$notify({
-          title: '登录成功',
-          message: '欢迎回来！',
-          type: 'success'
+        this.$notify({
+          title: "登录成功",
+          message: "欢迎回来！",
+          type: "success",
         });
-      }else{
-       this.$message({
-          message: '用户名密码不正确',
-          type: 'warning'
+      } else {
+        this.$message({
+          message: "用户名密码不正确",
+          type: "warning",
         });
       }
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -112,7 +161,8 @@ $input-bg: rgba(30, 41, 59, 0.6);
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei",
+    Arial, sans-serif;
 
   .background-layer {
     position: absolute;
@@ -122,7 +172,7 @@ $input-bg: rgba(30, 41, 59, 0.6);
     height: 100%;
     z-index: -1;
     /* 请替换为你的背景图路径 */
-    background-image: url('~@/assets/img/bg.jpg');
+    background-image: url("~@/assets/img/bg.jpg");
     background-size: cover;
     background-position: center;
     filter: brightness(0.6) contrast(1.1);
@@ -167,7 +217,7 @@ $input-bg: rgba(30, 41, 59, 0.6);
   background: rgba(13, 33, 60, 0.65);
   backdrop-filter: blur(10px);
   border: 2px solid $border-color;
-  box-shadow: 0px 4px 20px 0px rgba(23,159,222,0.2);
+  box-shadow: 0px 4px 20px 0px rgba(23, 159, 222, 0.2);
   border-radius: 20px;
   display: flex;
   flex-direction: column;
