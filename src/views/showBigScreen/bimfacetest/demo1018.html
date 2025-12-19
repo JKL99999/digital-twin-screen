@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- 本DEMO中将演示如何通过API设置自定义模型显示视角及工具条上的HOME视图 -->
+
+<head>
+  <meta charset="utf-8">
+  <title>自定义HOME视图</title>
+  <style type="text/css">
+    * {
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    .buttons {
+      font-size: 0;
+    }
+
+    .button {
+      margin: 5px 0 5px 5px;
+      width: 100px;
+      height: 30px;
+      border-radius: 3px;
+      border: none;
+      background: #32D3A6;
+      color: #FFFFFF;
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      height: 100%;
+    }
+
+    #domId {
+      flex: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 定义DOM元素，用于在该DOM元素中显示模型或图纸 -->
+  <div class='main'>
+    <div class='buttons'>
+      <button class="button" id="btnCustomView" onclick="customView()">设置HOME视图</button>
+    </div>
+    <!-- 定义DOM元素，用于在该DOM元素中显示模型或图纸 -->
+    <div id="domId"></div>
+  </div>
+  <!-- 引用BIMFACE的JavaScript显示组件库 -->
+  <script src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js"></script>
+  <script>
+    let viewToken = '26b80986dbac44b6942c7f6caaba5d32';
+    // 声明Viewer及App
+    let viewer3D;
+    let app;
+    let viewAdded = false;
+    let cameraState = {
+      "name":"persp",
+      "position":{
+        "x":-15290.504153609158,
+        "y":-11705.98598911822,
+        "z":6547.152792941356
+      },
+      "target":{
+        "x":35869.08012166626,
+        "y":23950.30963410126,
+        "z":-9486.25721153848
+      },
+      "up":{
+        "x":0,
+        "y":-0.0000036732050934432307,
+        "z":0.9999999999932538
+      },
+      "fov":45
+    };
+    // 配置JSSDK加载项
+    window.onload = function () {
+      let loaderConfig = new BimfaceSDKLoaderConfig();
+      loaderConfig.viewToken = viewToken;
+      BimfaceSDKLoader.load(loaderConfig, successCallback, failureCallback);
+    }
+    // 加载成功回调函数
+    let worldPosition = new Array();
+    function successCallback(viewMetaData) {
+      let dom4Show = document.getElementById('domId');
+      // 设置WebApplication3D的配置项
+      let webAppConfig = new Glodon.Bimface.Application.WebApplicationRfaConfig();
+      webAppConfig.domElement = dom4Show;
+      // 设置全局单位
+      webAppConfig.globalUnit = Glodon.Bimface.Common.Units.LengthUnits.Millimeter;
+      webAppConfig.EnableFamilyList = false;
+      // 设置模型爆炸配置项
+      webAppConfig.enableExplosion = true;
+      // 创建WebApplication3D，用以显示模型
+      app = new Glodon.Bimface.Application.WebApplicationRfa(webAppConfig);
+      app.addView(viewToken);
+      viewer3D = app.getViewer();
+      // 监听添加view完成的事件
+      viewer3D.addEventListener(Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, function () {
+        setCameraStatus();
+        //自适应屏幕大小
+        window.onresize = function () {
+          viewer3D.resize(document.documentElement.clientWidth, document.documentElement.clientHeight - 40);
+        }
+        viewAdded = true;
+        // 渲染3D模型
+        viewer3D.render();
+      });
+    };
+
+    // 加载失败回调函数
+    function failureCallback(error) {
+      console.log(error);
+    }
+    function setCameraStatus() {
+            viewer3D.setCameraStatus(cameraState);
+    }
+
+
+    // ************************** 设置自定义HOME视图 **************************
+    let homeview
+    function customView() {
+      if (!viewAdded) {
+        return;
+      } else {
+        homeview = viewer3D.getCameraStatus();
+        viewer3D.getCamera().setHomeView({status:homeview});
+        window.alert(JSON.stringify(homeview));
+        viewer3D.render();
+      }
+    }
+
+  </script>
+</body>
+
+</html>

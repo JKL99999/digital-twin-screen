@@ -1,4341 +1,4295 @@
 <template>
-  <!-- 整页容器：深蓝科技风背景，响应式布局 -->
-  <div class="pile-visualization">
-    <!-- 顶部导航与标题区 -->
-    <header class="topbar">
-      <div class="topbar__left">
-        <div class="datetime">
-          <span class="date">{{ now.date }}</span>
-          <span class="time">{{ now.time }}</span>
-          <span class="weather">{{ weather }}</span>
-        </div>
-        <div class="status-tabs">
-          <button
-            v-for="(t, i) in statusTabs"
-            :key="t.key"
-            class="chip"
-            :class="{ active: activeStatusIndex === i }"
-            @click="activeStatusIndex = i"
-          >
-            {{ t.label }}
-          </button>
-        </div>
-      </div>
-      <div class="topbar__center">
-        <h1 class="title">浦东机场T3航站区港湾机坪</h1>
-        <div class="counters">
-          <div class="counter">
-            <span class="counter__icon" />
-            <span class="counter__num">{{ counters.total }}</span>
-          </div>
-          <div class="counter">
-            <span class="counter__icon" />
-            <span class="counter__num">{{ counters.completed }}</span>
-          </div>
-          <div class="counter">
-            <span class="counter__icon" />
-            <span class="counter__num">{{ counters.pending }}</span>
-          </div>
-        </div>
-      </div>
-      <div class="topbar__right">
-        <div class="search">
-          <input
-            v-model="searchKeyword"
-            type="text"
-            placeholder="请输入桩基编号等信息"
-          />
-          <button class="btn" @click="onSearch">搜索</button>
-        </div>
-        <div class="actions">
-          <button class="icon-btn" title="刷新" @click="refreshClock">⟳</button>
-          <button class="icon-btn" title="设置" @click="toggleSettings">
-            ⚙
-          </button>
-          <button class="icon-btn" title="退出" @click="onExit">⇦</button>
-        </div>
-        <div class="update-time">数据更新于：{{ now.date }}</div>
-      </div>
-      <svg class="topbar-hud" viewBox="0 0 100 10" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="hudGradient" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#00e7ff" stop-opacity="0" />
-            <stop offset="35%" stop-color="#00e7ff" stop-opacity="0.6" />
-            <stop offset="65%" stop-color="#58a6ff" stop-opacity="0.6" />
-            <stop offset="100%" stop-color="#58a6ff" stop-opacity="0" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M2 8 L20 2 L80 2 L98 8"
-          fill="none"
-          stroke="url(#hudGradient)"
-          stroke-width="0.6"
-          stroke-linecap="round"
-          stroke-dasharray="6 2"
-        >
-          <animate
-            attributeName="stroke-dashoffset"
-            from="12"
-            to="0"
-            dur="3s"
-            repeatCount="indefinite"
-          />
-        </path>
-      </svg>
-    </header>
-
-    <!-- 主体内容区：左侧信息面板 + 右侧模型与控制区 -->
-    <div class="main">
-      <!-- 左侧可视化指标面板 -->
-      <aside class="left-panel" :class="{ collapsed: leftCollapsed }">
-        <div class="panel-header">
-          <span>施工进度库</span>
-          <button class="toggle" @click="leftCollapsed = !leftCollapsed">
-            {{ leftCollapsed ? "展开" : "收起" }}
-          </button>
-        </div>
-        <div class="gauge">
-          <!-- 仪表盘：使用 CSS conic-gradient 渲染进度环 -->
-          <div class="gauge__ring" :style="gaugeStyle">
-            <div class="gauge__inner">
-              <div class="gauge__percent">{{ progressPercent }}%</div>
-              <div class="gauge__caption">总体完成率</div>
-            </div>
-          </div>
-          <div class="gauge__legend">
-            <div class="legend-item">
-              <span class="dot dot--red" />
-              <span>已完成：{{ legend.completed }}</span>
-            </div>
-            <div class="legend-item">
-              <span class="dot dot--white" />
-              <span>未完成：{{ legend.unfinished }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 指标进度条列表 -->
-        <div class="metrics">
-          <div v-for="m in metrics" :key="m.key" class="metric">
-            <div class="metric__row">
-              <span class="metric__name">{{ m.name }}</span>
-              <span class="metric__ratio">{{ m.done }} / {{ m.total }}</span>
-              <span class="metric__pct"
-                >{{ Math.round((m.done / m.total) * 100) }}%</span
-              >
-            </div>
-            <div class="bar">
-              <div
-                class="bar__fill"
-                :style="{ width: (m.done / m.total) * 100 + '%' }"
-              />
-            </div>
-          </div>
-        </div>
-        <div class="map-legend">
-          <img src="@/views/showBigScreen/img/B区.png" alt="">
-        </div>
-
-        <!-- 底部工程量统计面板 -->
-        <div class="mini-chart engineering-stats">
-          <div class="panel-container">
-            <!-- Header -->
-            <div class="panel-header">
-              <h2 class="panel-title">工程量统计概览</h2>
-              <p class="panel-summary">
-                总桩数: <span class="highlight">{{ totalPiles }}</span> 根 /
-                总体积: <span class="highlight">{{ totalVolume }}</span> m³
-              </p>
-            </div>
-
-            <!-- Content -->
-            <main class="content-container">
-              <div
-                v-for="(section, index) in projectData"
-                :key="index"
-                class="section-card"
-              >
-                <h3 class="section-title">{{ section.section }} 标段</h3>
-                <div class="section-summary">
-                  <span>总计:</span>
-                  <span class="highlight-cyan"
-                    >{{ getSectionStats(section).count }} 根 /
-                    {{ getSectionStats(section).volume }} m³</span
-                  >
+    <!-- 整页容器：深蓝科技风背景，响应式布局 -->
+    <div class="pile-visualization">
+        <!-- 顶部导航与标题区 -->
+        <header class="topbar">
+            <div class="topbar__left">
+                <div class="datetime">
+                    <span class="date">{{ now.date }}</span>
+                    <span class="time">{{ now.time }}</span>
+                    <span class="weather">{{ weather }}</span>
                 </div>
-                <div class="pile-list">
-                  <div class="list-header">
-                    <span class="col-type">类型</span>
-                    <span class="col-count">数量</span>
-                    <span class="col-volume">体积</span>
-                  </div>
-                  <div
-                    v-for="(pile, pIndex) in section.piles"
-                    :key="pIndex"
-                    class="pile-item"
-                  >
-                    <span class="col-type truncate">{{ pile.type }}</span>
-                    <span class="col-count highlight-cyan"
-                      >{{ pile.count }} {{ pile.unit }}</span
+                <div class="status-tabs">
+                    <button
+                        v-for="(t, i) in statusTabs"
+                        :key="t.key"
+                        class="chip"
+                        :class="{ active: activeStatusIndex === i }"
+                        @click="activeStatusIndex = i"
                     >
-                    <span class="col-volume highlight-cyan"
-                      >{{ pile.volume }}
-                      {{
-                        pile.unitVolume ? pile.unitVolume.charAt(0) : "m"
-                      }}³</span
-                    >
-                  </div>
+                        {{ t.label }}
+                    </button>
                 </div>
-              </div>
-            </main>
-          </div>
-        </div>
-      </aside>
+            </div>
+            <div class="topbar__center">
+                <h1 class="title">浦东机场T3航站区港湾机坪</h1>
+                <div class="counters">
+                    <div class="counter">
+                        <span class="counter__icon" />
+                        <span class="counter__num">{{ counters.total }}</span>
+                    </div>
+                    <div class="counter">
+                        <span class="counter__icon" />
+                        <span class="counter__num">{{ counters.completed }}</span>
+                    </div>
+                    <div class="counter">
+                        <span class="counter__icon" />
+                        <span class="counter__num">{{ counters.pending }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="topbar__right">
+                <div class="search">
+                    <input v-model="searchKeyword" type="text" placeholder="请输入桩基编号等信息" />
+                    <button class="btn" @click="onSearch">搜索</button>
+                </div>
+                <div class="actions">
+                    <button class="icon-btn" title="刷新" @click="refreshClock">⟳</button>
+                    <button class="icon-btn" title="设置" @click="toggleSettings">⚙</button>
+                    <button class="icon-btn" title="退出" @click="onExit">⇦</button>
+                </div>
+                <div class="update-time">数据更新于：{{ now.date }}</div>
+            </div>
+            <svg class="topbar-hud" viewBox="0 0 100 10" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="hudGradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#00e7ff" stop-opacity="0" />
+                        <stop offset="35%" stop-color="#00e7ff" stop-opacity="0.6" />
+                        <stop offset="65%" stop-color="#58a6ff" stop-opacity="0.6" />
+                        <stop offset="100%" stop-color="#58a6ff" stop-opacity="0" />
+                    </linearGradient>
+                </defs>
+                <path
+                    d="M2 8 L20 2 L80 2 L98 8"
+                    fill="none"
+                    stroke="url(#hudGradient)"
+                    stroke-width="0.6"
+                    stroke-linecap="round"
+                    stroke-dasharray="6 2"
+                >
+                    <animate attributeName="stroke-dashoffset" from="12" to="0" dur="3s" repeatCount="indefinite" />
+                </path>
+            </svg>
+        </header>
 
-      <!-- 右侧主视图区：过滤器 + 模型占位（红色框） -->
-      <section class="viewport">
-        <div class="filters">
-          <div class="filter-group">
-            <span class="filter-label">类型</span>
-            <button
-              v-for="t in typeFilters"
-              :key="t.key"
-              class="chip"
-              :class="{ active: activeType === t.key }"
-              @click="activeType = t.key"
-            >
-              {{ t.label }}
-            </button>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label">分区</span>
-            <button
-              v-for="z in zoneFilters"
-              :key="z.key"
-              class="chip"
-              :class="{ active: activeZone === z.key }"
-              @click="activeZone = z.key"
-            >
-              {{ z.label }}
-            </button>
-          </div>
-          <div class="complete-group">
-            <button
-              id="btnOverrideComponentsColorByObjectId"
-              type="button"
-              class="button"
-              @click="overrideComponentsColorById"
-            >
-              {{ btnTexts.id }}
-            </button>
-            <button
-              id="btnOverrideComponentsColorByObjectData"
-              type="button"
-              class="button"
-              @click="overrideComponentsColorByData"
-            >
-              {{ btnTexts.data }}
-            </button>
-            <button
-              id="btnOverrideAllComponentsColor"
-              type="button"
-              class="button"
-              @click="overrideAllComponentsColor"
-            >
-              {{ btnTexts.all }}
-            </button>
-            <button @click="overridelookup">查看一下</button>
-            <button @click="zoomToComponents">缩放到构件</button>
-          </div>
-        </div>
+        <!-- 主体内容区：左侧信息面板 + 右侧模型与控制区 -->
+        <div class="main">
+            <!-- 左侧可视化指标面板 -->
+            <aside class="left-panel" :class="{ collapsed: leftCollapsed }">
+                <div class="panel-header">
+                    <span>施工进度库</span>
+                    <button class="toggle" @click="leftCollapsed = !leftCollapsed">
+                        {{ leftCollapsed ? "展开" : "收起" }}
+                    </button>
+                </div>
+                <div class="gauge">
+                    <!-- 仪表盘：使用 CSS conic-gradient 渲染进度环 -->
+                    <div class="gauge__ring" :style="gaugeStyle">
+                        <div class="gauge__inner">
+                            <div class="gauge__percent">{{ progressPercent }}%</div>
+                            <div class="gauge__caption">总体完成率</div>
+                        </div>
+                    </div>
+                    <div class="gauge__legend">
+                        <div class="legend-item">
+                            <span class="dot dot--red" />
+                            <span>已完成：{{ legend.completed }}</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="dot dot--white" />
+                            <span>未完成：{{ legend.unfinished }}</span>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- 红色框模型占位：整合 demo999.html 的结构到右下角区域 -->
-        <div class="model-frame">
-          <div class="demo999">
-            <!-- 模型显示 DOM：保留与 demo999.html 一致的 ID，便于后续接入 -->
-            <div id="domId" class="model" />
-          </div>
-          <div class="overlay">
-            <div class="hud-grid" />
-            <div class="scan-bar" />
-            <svg class="corner corner--lt" viewBox="0 0 20 20">
-              <path d="M1 12 L1 1 L12 1" />
-            </svg>
-            <svg class="corner corner--rt" viewBox="0 0 20 20">
-              <path d="M8 1 L19 1 L19 12" />
-            </svg>
-            <svg class="corner corner--lb" viewBox="0 0 20 20">
-              <path d="M1 8 L1 19 L12 19" />
-            </svg>
-            <svg class="corner corner--rb" viewBox="0 0 20 20">
-              <path d="M8 19 L19 19 L19 8" />
-            </svg>
-          </div>
+                <!-- 指标进度条列表 -->
+                <div class="metrics">
+                    <div v-for="m in metrics" :key="m.key" class="metric">
+                        <div class="metric__row">
+                            <span class="metric__name">{{ m.name }}</span>
+                            <span class="metric__ratio">{{ m.done }} / {{ m.total }}</span>
+                            <span class="metric__pct">{{ Math.round((m.done / m.total) * 100) }}%</span>
+                        </div>
+                        <div class="bar">
+                            <div class="bar__fill" :style="{ width: (m.done / m.total) * 100 + '%' }" />
+                        </div>
+                    </div>
+                </div>
+                <div class="map-legend">
+                    <img src="@/views/showBigScreen/img/B区.png" alt="" />
+                </div>
+
+                <!-- 底部工程量统计面板 -->
+                <div class="mini-chart engineering-stats">
+                    <div class="panel-container">
+                        <!-- Header -->
+                        <div class="panel-header">
+                            <h2 class="panel-title">工程量统计概览</h2>
+                            <p class="panel-summary">
+                                总桩数: <span class="highlight">{{ totalPiles }}</span> 根 / 总体积:
+                                <span class="highlight">{{ totalVolume }}</span> m³
+                            </p>
+                        </div>
+
+                        <!-- Content -->
+                        <main class="content-container">
+                            <div v-for="(section, index) in projectData" :key="index" class="section-card">
+                                <h3 class="section-title">{{ section.section }} 标段</h3>
+                                <div class="section-summary">
+                                    <span>总计:</span>
+                                    <span class="highlight-cyan"
+                                        >{{ getSectionStats(section).count }} 根 /
+                                        {{ getSectionStats(section).volume }} m³</span
+                                    >
+                                </div>
+                                <div class="pile-list">
+                                    <div class="list-header">
+                                        <span class="col-type">类型</span>
+                                        <span class="col-count">数量</span>
+                                        <span class="col-volume">体积</span>
+                                    </div>
+                                    <div v-for="(pile, pIndex) in section.piles" :key="pIndex" class="pile-item">
+                                        <span class="col-type truncate">{{ pile.type }}</span>
+                                        <span class="col-count highlight-cyan">{{ pile.count }} {{ pile.unit }}</span>
+                                        <span class="col-volume highlight-cyan"
+                                            >{{ pile.volume }}
+                                            {{ pile.unitVolume ? pile.unitVolume.charAt(0) : "m" }}³</span
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+                        </main>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 右侧主视图区：过滤器 + 模型占位（红色框） -->
+            <section class="viewport">
+                <div class="filters">
+                    <div class="filter-group">
+                        <span class="filter-label">类型</span>
+                        <button
+                            v-for="t in typeFilters"
+                            :key="t.key"
+                            class="chip"
+                            :class="{ active: activeType === t.key }"
+                            @click="activeType = t.key"
+                        >
+                            {{ t.label }}
+                        </button>
+                    </div>
+                    <div class="filter-group">
+                        <span class="filter-label">分区</span>
+                        <button
+                            v-for="z in zoneFilters"
+                            :key="z.key"
+                            class="chip"
+                            :class="{ active: activeZone === z.key }"
+                            @click="activeZone = z.key"
+                        >
+                            {{ z.label }}
+                        </button>
+                    </div>
+                    <div class="complete-group">
+                        <button
+                            id="btnOverrideComponentsColorByObjectId"
+                            type="button"
+                            class="button"
+                            @click="overrideComponentsColorById"
+                        >
+                            {{ btnTexts.id }}
+                        </button>
+                        <button
+                            id="btnOverrideComponentsColorByObjectData"
+                            type="button"
+                            class="button"
+                            @click="overrideComponentsColorByData"
+                        >
+                            {{ btnTexts.data }}
+                        </button>
+                        <button
+                            id="btnOverrideAllComponentsColor"
+                            type="button"
+                            class="button"
+                            @click="overrideAllComponentsColor"
+                        >
+                            {{ btnTexts.all }}
+                        </button>
+                        <button @click="overridelookup">查看一下</button>
+                        <button @click="zoomToComponents">缩放到构件</button>
+                    </div>
+                </div>
+
+                <!-- 红色框模型占位：整合 demo999.html 的结构到右下角区域 -->
+                <div class="model-frame">
+                    <div class="demo999">
+                        <!-- 模型显示 DOM：保留与 demo999.html 一致的 ID，便于后续接入 -->
+                        <div id="domId" class="model" />
+                    </div>
+                    <div class="overlay">
+                        <div class="hud-grid" />
+                        <div class="scan-bar" />
+                        <svg class="corner corner--lt" viewBox="0 0 20 20">
+                            <path d="M1 12 L1 1 L12 1" />
+                        </svg>
+                        <svg class="corner corner--rt" viewBox="0 0 20 20">
+                            <path d="M8 1 L19 1 L19 12" />
+                        </svg>
+                        <svg class="corner corner--lb" viewBox="0 0 20 20">
+                            <path d="M1 8 L1 19 L12 19" />
+                        </svg>
+                        <svg class="corner corner--rb" viewBox="0 0 20 20">
+                            <path d="M8 19 L19 19 L19 8" />
+                        </svg>
+                    </div>
+                </div>
+            </section>
         </div>
-      </section>
     </div>
-  </div>
 </template>
 
 <script>
 // demo999 中的按 ID 着色示例列表（示意缩略版，可替换为完整清单）
 const OVERRIDE_ID = [
-  "922598",
-  "927921",
-  "927967",
-  "935333",
-  "923028",
-  "925341",
-  "942671",
-  "935285",
-  "926439",
-  "902507",
-  "925265",
-  "959714",
-  "925583",
-  "970720",
-  "953628",
-  "909551",
-  "925623",
-  "952938",
-  "925703",
-  "911649",
-  "971016",
-  "936167",
-  "910419",
-  "937087",
-  "943455",
-  "935483",
-  "909973",
-  "955206",
-  "935199",
-  "934693",
-  "909779",
-  "925721",
-  "924507",
-  "910149",
-  "910057",
-  "955234",
-  "925307",
-  "954474",
-  "923178",
-  "955130",
-  "934373",
-  "940890",
-  "902851",
-  "955104",
-  "899303",
-  "936203",
-  "953680",
-  "945431",
-  "924581",
-  "923768",
-  "907739",
-  "945258",
-  "909435",
-  "940752",
-  "945551",
-  "924657",
-  "909159",
-  "898228",
-  "952958",
-  "925063",
-  "902959",
-  "922432",
-  "935207",
-  "899897",
-  "925999",
-  "935893",
-  "927733",
-  "910315",
-  "952956",
-  "942719",
-  "927617",
-  "970792",
-  "922488",
-  "899695",
-  "924373",
-  "909571",
-  "903469",
-  "898240",
-  "928357",
-  "923000",
-  "924365",
-  "971216",
-  "925953",
-  "923190",
-  "936435",
-  "959510",
-  "954342",
-  "924411",
-  "923410",
-  "936783",
-  "940266",
-  "953226",
-  "898757",
-  "971090",
-  "909947",
-  "907777",
-  "936187",
-  "911393",
-  "910039",
-  "923114",
-  "935537",
-  "955609",
-  "936739",
-  "910779",
-  "937043",
-  "943469",
-  "909749",
-  "922810",
-  "959272",
-  "909005",
-  "922908",
-  "909359",
-  "903125",
-  "971176",
-  "910381",
-  "909615",
-  "903007",
-  "935159",
-  "899027",
-  "934689",
-  "927423",
-  "924827",
-  "924429",
-  "936293",
-  "922560",
-  "923586",
-  "923288",
-  "953878",
-  "909035",
-  "898975",
-  "954330",
-  "910565",
-  "899569",
-  "936513",
-  "924989",
-  "971208",
-  "899449",
-  "954168",
-  "923780",
-  "922546",
-  "959408",
-  "935411",
-  "925967",
-  "954576",
-  "923362",
-  "924741",
-  "902377",
-  "940818",
-  "925017",
-  "959522",
-  "910241",
-  "898222",
-  "909269",
-  "898174",
-  "954926",
-  "945290",
-  "927829",
-  "908805",
-  "946604",
-  "954864",
-  "898090",
-  "958334",
-  "910599",
-  "945555",
-  "899375",
-  "959444",
-  "959380",
-  "923680",
-  "925819",
-  "970838",
-  "954910",
-  "909171",
-  "954562",
-  "927729",
-  "952858",
-  "908429",
-  "927715",
-  "909827",
-  "925059",
-  "941268",
-  "923864",
-  "923786",
-  "923480",
-  "910439",
-  "923792",
-  "935351",
-  "903123",
-  "899887",
-  "927397",
-  "937009",
-  "934923",
-  "971342",
-  "941008",
-  "935441",
-  "910153",
-  "923294",
-  "940650",
-  "943007",
-  "899007",
-  "955296",
-  "954312",
-  "936757",
-  "925541",
-  "922684",
-  "902357",
-  "959434",
-  "935363",
-  "926867",
-  "898357",
-  "924256",
-  "923328",
-  "927299",
-  "937093",
-  "935339",
-  "923602",
-  "970722",
-  "934903",
-  "923724",
-  "911355",
-  "945797",
-  "970974",
-  "908689",
-  "924925",
-  "943417",
-  "923684",
-  "926039",
-  "924565",
-  "911267",
-  "908287",
-  "899499",
-  "899873",
-  "926243",
-  "899577",
-  "937019",
-  "953730",
-  "945615",
-  "902779",
-  "954578",
-  "907607",
-  "926347",
-  "954998",
-  "899469",
-  "954108",
-  "927863",
-  "940295",
-  "926833",
-  "935741",
-  "927071",
-  "953948",
-  "924619",
-  "908127",
-  "936705",
-  "909555",
-  "959072",
-  "952904",
-  "934745",
-  "928053",
-  "927603",
-  "898895",
-  "898573",
-  "899327",
-  "952964",
-  "940884",
-  "899645",
-  "927561",
-  "898122",
-  "935661",
-  "936301",
-  "898134",
-  "908963",
-  "898977",
-  "971168",
-  "941208",
-  "899383",
-  "936581",
-  "909647",
-  "940756",
-  "935283",
-  "926777",
-  "959046",
-  "923156",
-  "959364",
-  "927065",
-  "925047",
-  "936417",
-  "926067",
-  "907957",
-  "945262",
-  "940856",
-  "908859",
-  "927343",
-  "923112",
-  "935909",
-  "924899",
-  "909581",
-  "910459",
-  "907671",
-  "902653",
-  "924603",
-  "899559",
-  "907675",
-  "934671",
-  "925241",
-  "952804",
-  "902425",
-  "940588",
-  "925101",
-  "936303",
-  "899659",
-  "923844",
-  "942847",
-  "971116",
-  "908219",
-  "926887",
-  "899377",
-  "907667",
-  "898365",
-  "935935",
-  "935265",
-  "898423",
-  "922634",
-  "926799",
-  "898799",
-  "908085",
-  "940832",
-  "934337",
-  "910423",
-  "941072",
-  "936291",
-  "923090",
-  "925199",
-  "898735",
-  "927119",
-  "926451",
-  "922820",
-  "899785",
-  "959536",
-  "898769",
-  "935169",
-  "909485",
-  "909815",
-  "899573",
-  "953384",
-  "935673",
-  "934403",
-  "899207",
-  "955170",
-  "925407",
-  "934571",
-  "955188",
-  "940522",
-  "943009",
-  "928065",
-  "935293",
-  "954326",
-  "910051",
-  "940530",
-  "959116",
-  "924393",
-  "971274",
-  "924915",
-  "911243",
-  "952880",
-  "925597",
-  "923772",
-  "924999",
-  "940450",
-  "926051",
-  "922958",
-  "959410",
-  "954412",
-  "927555",
-  "909689",
-  "935771",
-  "925021",
-  "925007",
-  "943065",
-  "926111",
-  "924851",
-  "924423",
-  "971246",
-  "959120",
-  "923050",
-  "940362",
-  "936189",
-  "925661",
-  "903457",
-  "899709",
-  "927205",
-  "926267",
-  "953448",
-  "940566",
-  "934127",
-  "934907",
-  "935297",
-  "935417",
-  "953864",
-  "925693",
-  "924523",
-  "909667",
-  "898082",
-  "935597",
-  "959672",
-  "899155",
-  "911309",
-  "908907",
-  "899667",
-  "941110",
-  "928117",
-  "926963",
-  "923134",
-  "927123",
-  "899301",
-  "924747",
-  "898010",
-  "934899",
-  "952942",
-  "925253",
-  "935475",
-  "909199",
-  "899575",
-  "898383",
-  "898264",
-  "927231",
-  "945609",
-  "922738",
-  "941036",
-  "910675",
-  "934717",
-  "908353",
-  "903109",
-  "910936",
-  "898373",
-  "954026",
-  "925151",
-  "909623",
-  "927813",
-  "926119",
-  "909603",
-  "898909",
-  "924949",
-  "911463",
-  "958641",
-  "945603",
-  "959442",
-  "943481",
-  "907843",
-  "954380",
-  "926313",
-  "899409",
-  "945579",
-  "910393",
-  "971286",
-  "910773",
-  "970704",
-  "955228",
-  "953138",
-  "923810",
-  "923326",
-  "958268",
-  "955334",
-  "902429",
-  "970960",
-  "970842",
-  "954314",
-  "934523",
-  "926217",
-  "902463",
-  "925923",
-  "903145",
-  "955574",
-  "935481",
-  "927791",
-  "924957",
-  "897851",
-  "954224",
-  "924425",
-  "910073",
-  "899435",
-  "936951",
-  "922518",
-  "953854",
-  "928291",
-  "971192",
-  "953174",
-  "942603",
-  "936117",
-  "926031",
-  "908225",
-  "959374",
-  "925071",
-  "955300",
-  "943409",
-  "910475",
-  "928253",
-  "937061",
-  "899063",
-  "898078",
-  "959426",
-  "925765",
-  "910019",
-  "934733",
-  "911417",
-  "908821",
-  "924577",
-  "971414",
-  "908687",
-  "925731",
-  "959496",
-  "923054",
-  "902635",
-  "940662",
-  "935941",
-  "953942",
-  "911273",
-  "945270",
-  "909845",
-  "970994",
-  "928113",
-  "959552",
-  "954414",
-  "925345",
-  "954064",
-  "909045",
-  "898389",
-  "954572",
-  "941084",
-];
+    "922598",
+    "927921",
+    "927967",
+    "935333",
+    "923028",
+    "925341",
+    "942671",
+    "935285",
+    "926439",
+    "902507",
+    "925265",
+    "959714",
+    "925583",
+    "970720",
+    "953628",
+    "909551",
+    "925623",
+    "952938",
+    "925703",
+    "911649",
+    "971016",
+    "936167",
+    "910419",
+    "937087",
+    "943455",
+    "935483",
+    "909973",
+    "955206",
+    "935199",
+    "934693",
+    "909779",
+    "925721",
+    "924507",
+    "910149",
+    "910057",
+    "955234",
+    "925307",
+    "954474",
+    "923178",
+    "955130",
+    "934373",
+    "940890",
+    "902851",
+    "955104",
+    "899303",
+    "936203",
+    "953680",
+    "945431",
+    "924581",
+    "923768",
+    "907739",
+    "945258",
+    "909435",
+    "940752",
+    "945551",
+    "924657",
+    "909159",
+    "898228",
+    "952958",
+    "925063",
+    "902959",
+    "922432",
+    "935207",
+    "899897",
+    "925999",
+    "935893",
+    "927733",
+    "910315",
+    "952956",
+    "942719",
+    "927617",
+    "970792",
+    "922488",
+    "899695",
+    "924373",
+    "909571",
+    "903469",
+    "898240",
+    "928357",
+    "923000",
+    "924365",
+    "971216",
+    "925953",
+    "923190",
+    "936435",
+    "959510",
+    "954342",
+    "924411",
+    "923410",
+    "936783",
+    "940266",
+    "953226",
+    "898757",
+    "971090",
+    "909947",
+    "907777",
+    "936187",
+    "911393",
+    "910039",
+    "923114",
+    "935537",
+    "955609",
+    "936739",
+    "910779",
+    "937043",
+    "943469",
+    "909749",
+    "922810",
+    "959272",
+    "909005",
+    "922908",
+    "909359",
+    "903125",
+    "971176",
+    "910381",
+    "909615",
+    "903007",
+    "935159",
+    "899027",
+    "934689",
+    "927423",
+    "924827",
+    "924429",
+    "936293",
+    "922560",
+    "923586",
+    "923288",
+    "953878",
+    "909035",
+    "898975",
+    "954330",
+    "910565",
+    "899569",
+    "936513",
+    "924989",
+    "971208",
+    "899449",
+    "954168",
+    "923780",
+    "922546",
+    "959408",
+    "935411",
+    "925967",
+    "954576",
+    "923362",
+    "924741",
+    "902377",
+    "940818",
+    "925017",
+    "959522",
+    "910241",
+    "898222",
+    "909269",
+    "898174",
+    "954926",
+    "945290",
+    "927829",
+    "908805",
+    "946604",
+    "954864",
+    "898090",
+    "958334",
+    "910599",
+    "945555",
+    "899375",
+    "959444",
+    "959380",
+    "923680",
+    "925819",
+    "970838",
+    "954910",
+    "909171",
+    "954562",
+    "927729",
+    "952858",
+    "908429",
+    "927715",
+    "909827",
+    "925059",
+    "941268",
+    "923864",
+    "923786",
+    "923480",
+    "910439",
+    "923792",
+    "935351",
+    "903123",
+    "899887",
+    "927397",
+    "937009",
+    "934923",
+    "971342",
+    "941008",
+    "935441",
+    "910153",
+    "923294",
+    "940650",
+    "943007",
+    "899007",
+    "955296",
+    "954312",
+    "936757",
+    "925541",
+    "922684",
+    "902357",
+    "959434",
+    "935363",
+    "926867",
+    "898357",
+    "924256",
+    "923328",
+    "927299",
+    "937093",
+    "935339",
+    "923602",
+    "970722",
+    "934903",
+    "923724",
+    "911355",
+    "945797",
+    "970974",
+    "908689",
+    "924925",
+    "943417",
+    "923684",
+    "926039",
+    "924565",
+    "911267",
+    "908287",
+    "899499",
+    "899873",
+    "926243",
+    "899577",
+    "937019",
+    "953730",
+    "945615",
+    "902779",
+    "954578",
+    "907607",
+    "926347",
+    "954998",
+    "899469",
+    "954108",
+    "927863",
+    "940295",
+    "926833",
+    "935741",
+    "927071",
+    "953948",
+    "924619",
+    "908127",
+    "936705",
+    "909555",
+    "959072",
+    "952904",
+    "934745",
+    "928053",
+    "927603",
+    "898895",
+    "898573",
+    "899327",
+    "952964",
+    "940884",
+    "899645",
+    "927561",
+    "898122",
+    "935661",
+    "936301",
+    "898134",
+    "908963",
+    "898977",
+    "971168",
+    "941208",
+    "899383",
+    "936581",
+    "909647",
+    "940756",
+    "935283",
+    "926777",
+    "959046",
+    "923156",
+    "959364",
+    "927065",
+    "925047",
+    "936417",
+    "926067",
+    "907957",
+    "945262",
+    "940856",
+    "908859",
+    "927343",
+    "923112",
+    "935909",
+    "924899",
+    "909581",
+    "910459",
+    "907671",
+    "902653",
+    "924603",
+    "899559",
+    "907675",
+    "934671",
+    "925241",
+    "952804",
+    "902425",
+    "940588",
+    "925101",
+    "936303",
+    "899659",
+    "923844",
+    "942847",
+    "971116",
+    "908219",
+    "926887",
+    "899377",
+    "907667",
+    "898365",
+    "935935",
+    "935265",
+    "898423",
+    "922634",
+    "926799",
+    "898799",
+    "908085",
+    "940832",
+    "934337",
+    "910423",
+    "941072",
+    "936291",
+    "923090",
+    "925199",
+    "898735",
+    "927119",
+    "926451",
+    "922820",
+    "899785",
+    "959536",
+    "898769",
+    "935169",
+    "909485",
+    "909815",
+    "899573",
+    "953384",
+    "935673",
+    "934403",
+    "899207",
+    "955170",
+    "925407",
+    "934571",
+    "955188",
+    "940522",
+    "943009",
+    "928065",
+    "935293",
+    "954326",
+    "910051",
+    "940530",
+    "959116",
+    "924393",
+    "971274",
+    "924915",
+    "911243",
+    "952880",
+    "925597",
+    "923772",
+    "924999",
+    "940450",
+    "926051",
+    "922958",
+    "959410",
+    "954412",
+    "927555",
+    "909689",
+    "935771",
+    "925021",
+    "925007",
+    "943065",
+    "926111",
+    "924851",
+    "924423",
+    "971246",
+    "959120",
+    "923050",
+    "940362",
+    "936189",
+    "925661",
+    "903457",
+    "899709",
+    "927205",
+    "926267",
+    "953448",
+    "940566",
+    "934127",
+    "934907",
+    "935297",
+    "935417",
+    "953864",
+    "925693",
+    "924523",
+    "909667",
+    "898082",
+    "935597",
+    "959672",
+    "899155",
+    "911309",
+    "908907",
+    "899667",
+    "941110",
+    "928117",
+    "926963",
+    "923134",
+    "927123",
+    "899301",
+    "924747",
+    "898010",
+    "934899",
+    "952942",
+    "925253",
+    "935475",
+    "909199",
+    "899575",
+    "898383",
+    "898264",
+    "927231",
+    "945609",
+    "922738",
+    "941036",
+    "910675",
+    "934717",
+    "908353",
+    "903109",
+    "910936",
+    "898373",
+    "954026",
+    "925151",
+    "909623",
+    "927813",
+    "926119",
+    "909603",
+    "898909",
+    "924949",
+    "911463",
+    "958641",
+    "945603",
+    "959442",
+    "943481",
+    "907843",
+    "954380",
+    "926313",
+    "899409",
+    "945579",
+    "910393",
+    "971286",
+    "910773",
+    "970704",
+    "955228",
+    "953138",
+    "923810",
+    "923326",
+    "958268",
+    "955334",
+    "902429",
+    "970960",
+    "970842",
+    "954314",
+    "934523",
+    "926217",
+    "902463",
+    "925923",
+    "903145",
+    "955574",
+    "935481",
+    "927791",
+    "924957",
+    "897851",
+    "954224",
+    "924425",
+    "910073",
+    "899435",
+    "936951",
+    "922518",
+    "953854",
+    "928291",
+    "971192",
+    "953174",
+    "942603",
+    "936117",
+    "926031",
+    "908225",
+    "959374",
+    "925071",
+    "955300",
+    "943409",
+    "910475",
+    "928253",
+    "937061",
+    "899063",
+    "898078",
+    "959426",
+    "925765",
+    "910019",
+    "934733",
+    "911417",
+    "908821",
+    "924577",
+    "971414",
+    "908687",
+    "925731",
+    "959496",
+    "923054",
+    "902635",
+    "940662",
+    "935941",
+    "953942",
+    "911273",
+    "945270",
+    "909845",
+    "970994",
+    "928113",
+    "959552",
+    "954414",
+    "925345",
+    "954064",
+    "909045",
+    "898389",
+    "954572",
+    "941084",
+]
 const OVERRIDE_IDS = [
-  "899407",
-  "936453",
-  "923554",
-  "935267",
-  "959298",
-  "955046",
-  "971406",
-  "899741",
-  "908809",
-  "954744",
-  "924230",
-  "909081",
-  "943391",
-  "940834",
-  "925171",
-  "898665",
-  "922540",
-  "908355",
-  "940314",
-  "954008",
-  "908387",
-  "927009",
-  "958970",
-  "940596",
-  "936247",
-  "925531",
-  "954734",
-  "924961",
-  "899821",
-  "934303",
-  "927295",
-  "953276",
-  "927753",
-  "923564",
-  "954430",
-  "954772",
-  "936387",
-  "936725",
-  "954892",
-  "935053",
-  "935947",
-  "926983",
-  "945385",
-  "923642",
-  "923078",
-  "955607",
-  "926949",
-  "935167",
-  "923226",
-  "935677",
-  "924531",
-  "953520",
-  "903091",
-  "934331",
-  "935523",
-  "908633",
-  "954016",
-  "934397",
-  "910785",
-  "903029",
-  "945465",
-  "903381",
-  "910017",
-  "935873",
-  "971052",
-  "935803",
-  "959464",
-  "940584",
-  "908123",
-  "953812",
-  "935591",
-  "911343",
-  "898152",
-  "898333",
-  "936017",
-  "910719",
-  "898495",
-  "970682",
-  "907539",
-  "898246",
-  "927029",
-  "943483",
-  "936075",
-  "925227",
-  "899231",
-  "940930",
-  "945735",
-  "934433",
-  "907709",
-  "959300",
-  "923142",
-  "908001",
-  "959204",
-  "936151",
-  "907535",
-  "926421",
-  "953016",
-  "926829",
-  "923730",
-  "954434",
-  "935025",
-  "910103",
-  "927535",
-  "902931",
-  "899579",
-  "909911",
-  "908547",
-  "934381",
-  "910005",
-  "927659",
-  "936505",
-  "927547",
-  "909423",
-  "940758",
-  "911215",
-  "910059",
-  "926603",
-  "943001",
-  "924469",
-  "903389",
-  "945547",
-  "940678",
-  "926615",
-  "954382",
-  "953498",
-  "926181",
-  "903043",
-  "908319",
-  "936099",
-  "935973",
-  "903105",
-  "922688",
-  "909027",
-  "934979",
-  "953908",
-  "958623",
-  "954942",
-  "911569",
-  "935359",
-  "908399",
-  "926203",
-  "909583",
-  "899433",
-  "909791",
-  "935723",
-  "924495",
-  "936371",
-  "970814",
-  "954164",
-  "922494",
-  "899701",
-  "898915",
-  "955180",
-  "924713",
-  "908025",
-  "908767",
-  "970648",
-  "941130",
-  "935309",
-  "971096",
-  "926875",
-  "945349",
-  "942894",
-  "918132",
-  "955286",
-  "940600",
-  "953632",
-  "970864",
-  "925329",
-  "902971",
-  "953714",
-  "945429",
-  "934497",
-  "910757",
-  "954558",
-  "943593",
-  "940992",
-  "958189",
-  "911643",
-  "899299",
-  "927913",
-  "925397",
-  "925355",
-  "971330",
-  "909889",
-  "902709",
-  "911479",
-  "936063",
-  "910651",
-  "909631",
-  "941112",
-  "934557",
-  "899805",
-  "922990",
-  "923806",
-  "911173",
-  "926099",
-  "959246",
-  "936805",
-  "899069",
-  "953682",
-  "971152",
-  "945695",
-  "898309",
-  "935899",
-  "935039",
-  "953376",
-  "940356",
-  "924669",
-  "898425",
-  "954204",
-  "955194",
-  "955162",
-  "954348",
-  "910575",
-  "902799",
-  "923138",
-  "954960",
-  "924557",
-  "942953",
-  "941116",
-  "954716",
-  "926869",
-  "910545",
-  "954092",
-  "927989",
-  "959488",
-  "909747",
-  "924873",
-  "941198",
-  "910363",
-  "927305",
-  "954296",
-  "926481",
-  "907769",
-  "924875",
-  "959594",
-  "927257",
-  "909009",
-  "907633",
-  "927663",
-  "911285",
-  "936179",
-  "925025",
-  "908475",
-  "898807",
-  "971018",
-  "943566",
-  "923506",
-  "922690",
-  "959494",
-  "953662",
-  "908717",
-  "953082",
-  "909415",
-  "945725",
-  "955032",
-  "945689",
-  "970816",
-  "898034",
-  "899021",
-  "907885",
-  "924939",
-  "936579",
-  "936257",
-  "909915",
-  "928139",
-  "902601",
-  "936917",
-  "940322",
-  "952864",
-  "941026",
-  "907855",
-  "910187",
-  "911613",
-  "927529",
-  "923224",
-  "911239",
-  "934607",
-  "934871",
-  "923512",
-  "897990",
-  "922680",
-  "909115",
-  "970914",
-  "940938",
-  "924275",
-  "971138",
-  "940690",
-  "935921",
-  "908905",
-  "954116",
-  "935507",
-  "924391",
-  "898254",
-  "940456",
-  "935713",
-  "934391",
-  "945713",
-  "924893",
-  "924889",
-  "926995",
-  "923398",
-  "934617",
-  "936545",
-  "942911",
-  "899195",
-  "908515",
-  "945757",
-  "898168",
-  "927411",
-  "923068",
-  "903157",
-  "927647",
-  "910709",
-  "959622",
-  "936429",
-  "934585",
-  "927211",
-  "899711",
-  "898875",
-  "910219",
-  "910155",
-  "934669",
-  "935983",
-  "922626",
-  "945244",
-  "926661",
-  "908511",
-  "943039",
-  "928107",
-  "941142",
-  "908701",
-  "909169",
-  "899871",
-  "910571",
-  "927035",
-  "927939",
-  "908939",
-  "955204",
-  "924859",
-  "910317",
-  "924785",
-  "936127",
-  "936067",
-  "945651",
-  "935471",
-  "959312",
-  "910795",
-  "971370",
-  "935057",
-  "959460",
-  "934525",
-  "926483",
-  "909131",
-  "955158",
-  "953914",
-  "940446",
-  "923674",
-  "897755",
-  "936473",
-  "927521",
-  "953354",
-  "899419",
-  "941152",
-  "954790",
-  "934283",
-  "902665",
-  "899537",
-  "945215",
-  "925335",
-  "922724",
-  "945501",
-  "923130",
-  "936685",
-  "926757",
-  "926683",
-  "940926",
-  "934593",
-  "927229",
-  "954388",
-  "926315",
-  "899361",
-  "926305",
-  "953804",
-  "924841",
-  "909679",
-  "936891",
-  "927621",
-  "927051",
-  "934973",
-  "922618",
-  "958677",
-  "922692",
-  "908237",
-  "922430",
-  "908107",
-  "936049",
-  "899517",
-  "953296",
-  "967281",
-  "959634",
-  "935551",
-  "925697",
-  "923790",
-  "899253",
-  "902611",
-  "941140",
-  "934407",
-  "925145",
-  "935357",
-  "903107",
-  "923846",
-  "902675",
-  "936791",
-  "898349",
-  "935173",
-  "899725",
-  "928317",
-  "954672",
-  "898445",
-  "926207",
-  "909033",
-  "928103",
-  "924459",
-  "902699",
-  "908729",
-  "908417",
-  "954052",
-  "958693",
-  "903860",
-  "911297",
-  "926339",
-  "935767",
-  "923152",
-  "959666",
-  "959670",
-  "935295",
-  "911453",
-  "953102",
-  "955330",
-  "970920",
-  "908623",
-  "909777",
-  "955060",
-  "902875",
-  "936913",
-  "898745",
-  "910203",
-  "927157",
-  "898198",
-  "926345",
-  "910243",
-  "910191",
-  "899793",
-  "945821",
-  "902485",
-  "971298",
-  "955370",
-  "955587",
-  "902829",
-  "899689",
-  "898351",
-  "934429",
-  "935115",
-  "898715",
-  "936219",
-  "927725",
-  "926633",
-  "903101",
-  "899339",
-  "924997",
-  "908221",
-  "926469",
-  "936547",
-  "953876",
-  "910123",
-  "926743",
-  "954670",
-  "909353",
-  "941270",
-  "955050",
-  "937083",
-  "907931",
-  "943597",
-  "927447",
-  "927167",
-  "943055",
-  "954640",
-  "936115",
-  "924963",
-  "923230",
-  "908371",
-  "954766",
-  "925515",
-  "908269",
-  "940702",
-  "936773",
-  "952954",
-  "953288",
-  "934721",
-  "908563",
-  "910359",
-  "902363",
-  "922734",
-  "927709",
-  "922970",
-  "943574",
-  "971000",
-  "899655",
-  "910543",
-  "924323",
-  "909303",
-  "898797",
-  "903173",
-  "922744",
-  "898995",
-  "926629",
-  "971300",
-  "936775",
-  "935037",
-  "910811",
-  "924709",
-  "936059",
-  "899529",
-  "971322",
-  "926835",
-  "959320",
-  "927991",
-  "924953",
-  "927885",
-  "908027",
-  "907857",
-  "909745",
-  "908747",
-  "970770",
-  "898649",
-  "934873",
-  "924845",
-  "936595",
-  "942892",
-  "936793",
-  "934275",
-  "970916",
-  "958633",
-  "926607",
-  "908187",
-  "942993",
-  "927253",
-  "959386",
-  "902549",
-  "970676",
-  "928041",
-  "925833",
-  "909669",
-  "928133",
-  "934599",
-  "959562",
-  "902957",
-  "899393",
-  "959416",
-  "925841",
-  "941010",
-  "955172",
-  "945743",
-  "936623",
-  "959342",
-  "937111",
-  "898617",
-  "940984",
-  "910197",
-  "922506",
-  "934232",
-  "898293",
-  "926759",
-  "923550",
-  "959022",
-  "953192",
-  "927761",
-  "926213",
-  "923520",
-  "897835",
-  "911619",
-  "910283",
-  "911577",
-  "970728",
-  "953224",
-  "943395",
-  "909513",
-  "940974",
-  "935469",
-  "927149",
-  "910627",
-  "958611",
-  "903345",
-  "907845",
-  "941428",
-  "909849",
-  "955114",
-  "936081",
-  "955008",
-  "970854",
-  "934236",
-  "903167",
-  "911269",
-  "955232",
-  "958655",
-  "936149",
-  "898559",
-  "927911",
-  "936643",
-  "922776",
-  "910177",
-  "958599",
-  "908935",
-  "898503",
-  "902547",
-  "934309",
-  "899771",
-  "934559",
-  "937003",
-  "934451",
-  "935865",
-  "898763",
-  "924907",
-  "909707",
-  "953080",
-  "945507",
-  "927325",
-  "924389",
-  "940454",
-  "923116",
-  "925649",
-  "902805",
-  "934605",
-  "907605",
-  "898817",
-  "903489",
-  "942939",
-  "940310",
-  "936897",
-  "924739",
-  "910135",
-  "898869",
-  "970782",
-  "926033",
-  "899213",
-  "923412",
-  "935211",
-  "925769",
-  "935227",
-  "909231",
-  "922952",
-  "928029",
-  "927027",
-  "942884",
-  "922946",
-  "958310",
-  "922752",
-  "909463",
-  "908983",
-  "935237",
-  "926943",
-  "902385",
-  "923338",
-  "959532",
-  "899065",
-  "959032",
-  "954736",
-  "942923",
-  "899277",
-  "903501",
-  "934619",
-  "909183",
-  "898415",
-  "922778",
-  "908009",
-  "923268",
-  "945629",
-  "934661",
-  "926695",
-  "911489",
-  "924673",
-  "898238",
-  "953910",
-  "911155",
-  "942987",
-  "958681",
-  "959002",
-  "925109",
-  "902787",
-  "935987",
-  "926547",
-  "925179",
-  "922726",
-  "911513",
-  "934395",
-  "909821",
-  "953036",
-  "908673",
-  "908553",
-  "954448",
-  "952936",
-  "953214",
-  "902991",
-  "902383",
-  "909561",
-  "902661",
-  "909147",
-  "902997",
-  "923718",
-  "899189",
-  "934401",
-  "953934",
-  "945561",
-  "907879",
-  "924883",
-  "958941",
-  "940854",
-  "945419",
-  "953252",
-  "935097",
-  "954944",
-  "899283",
-  "926763",
-  "927311",
-  "925991",
-  "908071",
-  "908241",
-  "934307",
-  "925273",
-  "970884",
-  "909167",
-  "936915",
-  "925917",
-  "926937",
-  "899801",
-  "898597",
-  "910479",
-  "940552",
-  "935613",
-  "903049",
-  "907975",
-  "927539",
-  "903099",
-  "971150",
-  "898603",
-  "899247",
-  "928271",
-  "958298",
-  "940360",
-  "902587",
-  "898835",
-  "934949",
-  "927445",
-  "926549",
-  "923860",
-  "907945",
-  "908773",
-  "924545",
-  "922938",
-  "935395",
-  "899735",
-  "910267",
-  "953280",
-  "924617",
-  "936409",
-  "953042",
-  "934208",
-  "935763",
-  "910325",
-  "959276",
-  "927093",
-  "926357",
-  "945569",
-  "908339",
-  "925487",
-  "907651",
-  "945357",
-  "924767",
-  "898651",
-  "953210",
-  "899397",
-  "908795",
-  "971102",
-  "936083",
-  "942663",
-  "899295",
-  "909701",
-  "936327",
-  "926951",
-  "937113",
-  "953262",
-  "942983",
-  "899889",
-  "954852",
-  "908159",
-  "935347",
-  "953584",
-  "902441",
-  "958224",
-  "952812",
-  "907947",
-  "943411",
-  "907731",
-  "954222",
-  "898190",
-  "934259",
-  "902955",
-  "971088",
-  "936691",
-  "925181",
-  "934749",
-  "927903",
-  "959482",
-  "924401",
-  "922844",
-  "910289",
-  "899399",
-  "958961",
-  "936085",
-  "953134",
-  "923692",
-  "898913",
-  "909313",
-  "909215",
-  "953258",
-  "934667",
-  "908073",
-  "970808",
-  "934293",
-  "910193",
-  "903493",
-  "958284",
-  "934597",
-  "928207",
-  "909837",
-  "909299",
-  "935271",
-  "955186",
-  "940780",
-  "953222",
-  "953810",
-  "927021",
-  "926173",
-  "953020",
-  "909795",
-  "927153",
-  "953178",
-  "908151",
-  "926177",
-  "898443",
-  "899535",
-  "899893",
-  "953486",
-  "899145",
-  "927333",
-  "970746",
-  "925801",
-  "926495",
-  "955226",
-  "953614",
-  "934393",
-  "922428",
-  "936539",
-  "952846",
-  "940874",
-  "937077",
-  "907903",
-  "935029",
-  "924935",
-  "898371",
-  "911623",
-  "899737",
-  "922782",
-  "925303",
-  "899721",
-  "935841",
-  "926259",
-  "925775",
-  "899855",
-  "935437",
-  "898731",
-  "954130",
-  "945509",
-  "923366",
-  "954186",
-  "926737",
-  "941024",
-  "923336",
-  "954924",
-  "935253",
-  "927837",
-  "899305",
-  "927363",
-  "902789",
-  "910229",
-  "898747",
-  "941228",
-  "971144",
-  "924797",
-  "955160",
-  "937085",
-  "908853",
-  "925901",
-  "923234",
-  "958587",
-  "936803",
-  "907537",
-  "936469",
-  "925509",
-  "908333",
-  "927121",
-  "936729",
-  "935343",
-  "942639",
-  "941040",
-  "940590",
-  "922836",
-  "941154",
-  "926109",
-  "907861",
-  "926431",
-  "959566",
-  "936973",
-  "902499",
-  "927589",
-  "945359",
-  "909625",
-  "942989",
-  "953624",
-  "902597",
-  "925605",
-  "909295",
-  "908109",
-  "908297",
-  "908029",
-  "928265",
-  "935001",
-  "911485",
-  "924465",
-  "903129",
-  "935735",
-  "934411",
-  "908861",
-  "898311",
-  "970962",
-  "923174",
-  "954676",
-  "907673",
-  "926843",
-  "911235",
-  "911179",
-  "954704",
-  "925415",
-  "959596",
-  "909397",
-  "936021",
-  "907881",
-  "908307",
-  "940442",
-  "926685",
-  "926193",
-  "959504",
-  "954968",
-  "953646",
-  "910369",
-  "925981",
-  "971204",
-  "971200",
-  "945645",
-  "945599",
-  "923482",
-  "910471",
-  "897970",
-  "934975",
-  "902745",
-  "927115",
-  "923254",
-  "953586",
-  "936051",
-  "927979",
-  "940642",
-  "926285",
-  "959372",
-  "907661",
-  "954832",
-  "898160",
-  "899819",
-  "927297",
-  "909543",
-  "898893",
-  "926555",
-  "953410",
-  "925861",
-  "970936",
-  "902399",
-  "935473",
-  "934909",
-  "959174",
-  "907711",
-  "927523",
-  "910355",
-  "898645",
-  "924879",
-  "954404",
-  "943572",
-  "935205",
-  "971224",
-  "970828",
-  "898014",
-  "952766",
-  "959602",
-  "941088",
-  "928043",
-  "959716",
-  "940542",
-  "924547",
-  "942955",
-  "925479",
-  "899089",
-  "923804",
-  "902657",
-  "908815",
-  "941108",
-  "940714",
-  "936673",
-  "942913",
-  "902571",
-  "953514",
-  "909285",
-  "928105",
-  "925575",
-  "934561",
-  "909775",
-  "899565",
-  "927619",
-  "925957",
-  "953630",
-  "928165",
-  "926563",
-  "907703",
-  "922838",
-  "935137",
-  "942763",
-  "903361",
-  "927661",
-  "911189",
-  "935389",
-  "959512",
-  "898483",
-  "928099",
-  "909095",
-  "908857",
-  "970776",
-  "923118",
-  "908057",
-  "902525",
-  "940988",
-  "941160",
-  "925391",
-  "927491",
-  "927473",
-  "927631",
-  "898959",
-  "971284",
-  "940696",
-  "934881",
-  "907937",
-  "922818",
-  "942888",
-  "936625",
-  "924207",
-  "940866",
-  "927347",
-  "934715",
-  "941118",
-  "934831",
-  "953116",
-  "954214",
-  "935923",
-  "959544",
-  "945685",
-  "953114",
-  "959428",
-  "954550",
-  "910573",
-  "927789",
-  "907909",
-  "910775",
-  "899031",
-  "909529",
-  "953746",
-  "926471",
-  "954582",
-  "923464",
-  "926645",
-  "923640",
-  "909211",
-  "927917",
-  "908077",
-  "899365",
-  "927615",
-  "899259",
-  "954422",
-  "925517",
-  "909901",
-  "954322",
-  "936079",
-  "923012",
-  "958274",
-  "970902",
-  "940568",
-  "923396",
-  "935443",
-  "907545",
-  "953656",
-  "926299",
-  "899883",
-  "936133",
-  "911573",
-  "911579",
-  "954620",
-  "926955",
-  "924224",
-  "941182",
-  "923710",
-  "927415",
-  "971292",
-  "936871",
-  "934917",
-  "909161",
-  "953932",
-  "923742",
-  "908987",
-  "935015",
-  "925847",
-  "958595",
-  "955336",
-  "925349",
-  "910033",
-  "908403",
-  "927851",
-  "926073",
-  "923606",
-  "899291",
-  "934513",
-  "925339",
-  "936087",
-  "926849",
-  "898881",
-  "970716",
-  "927395",
-  "935901",
-  "923696",
-  "908337",
-  "936357",
-  "934757",
-  "953822",
-  "934823",
-  "924575",
-  "926739",
-  "924887",
-  "902917",
-  "925319",
-  "954778",
-  "936657",
-  "935981",
-  "898911",
-  "898070",
-  "926731",
-  "924243",
-  "923200",
-  "954132",
-  "909831",
-  "934226",
-  "908977",
-  "959170",
-  "954538",
-  "955216",
-  "924979",
-  "940674",
-  "923652",
-  "908819",
-  "953818",
-  "925113",
-  "909953",
-  "954746",
-  "953348",
-  "941378",
-  "926941",
-  "925719",
-  "923678",
-  "898899",
-  "899405",
-  "936877",
-  "908273",
-  "935549",
-  "909347",
-  "899567",
-  "953738",
-  "954522",
-  "899109",
-  "967302",
-  "970736",
-  "927721",
-  "954074",
-  "923524",
-  "925845",
-  "911323",
-  "954068",
-  "908527",
-  "908519",
-  "925033",
-  "899043",
-  "926229",
-  "925995",
-  "934625",
-  "959438",
-  "943433",
-  "926117",
-  "955052",
-  "953968",
-  "953552",
-  "898733",
-  "953944",
-  "953030",
-  "971078",
-  "925965",
-  "936135",
-  "923608",
-  "954900",
-  "953014",
-  "911373",
-  "936517",
-  "898773",
-  "958187",
-  "945591",
-  "923450",
-  "928285",
-  "941042",
-  "953242",
-  "926675",
-  "925313",
-  "935091",
-  "903147",
-  "927315",
-  "958238",
-  "959294",
-  "902671",
-  "935457",
-  "909477",
-  "927879",
-  "923246",
-  "899215",
-  "899099",
-  "953576",
-  "959104",
-  "926721",
-  "954494",
-  "918069",
-  "909671",
-  "898180",
-  "935783",
-  "953018",
-  "927595",
-  "927623",
-  "970908",
-  "897743",
-  "923518",
-  "909355",
-  "959042",
-  "967349",
-  "955596",
-  "954338",
-  "935663",
-  "953250",
-  "945537",
-  "940964",
-  "953450",
-  "909089",
-  "907681",
-  "958314",
-  "924843",
-  "924535",
-  "909173",
-  "898705",
-  "925677",
-  "910864",
-  "898182",
-  "908777",
-  "925615",
-  "936261",
-  "959530",
-  "959414",
-  "927175",
-  "924264",
-  "898062",
-  "955298",
-  "923658",
-  "911609",
-  "936801",
-  "908093",
-  "941272",
-  "936165",
-  "952970",
-  "955198",
-  "903646",
-  "924665",
-  "954506",
-  "902505",
-  "940251",
-  "926755",
-  "902411",
-  "940894",
-  "924499",
-  "942727",
-  "922976",
-  "926155",
-  "899341",
-  "940644",
-  "954460",
-  "953536",
-  "902757",
-  "907611",
-  "922770",
-  "922562",
-  "927597",
-  "909465",
-  "943399",
-  "953970",
-  "898791",
-  "936113",
-  "923736",
-  "908691",
-  "970952",
-  "927687",
-  "924823",
-  "922822",
-  "922544",
-  "941020",
-  "943063",
-  "935679",
-  "934739",
-  "911607",
-  "898811",
-  "909761",
-  "953330",
-  "897775",
-  "936525",
-  "955086",
-  "922768",
-  "934677",
-  "907863",
-  "923060",
-  "898433",
-  "898901",
-  "940692",
-  "936491",
-  "945641",
-  "910555",
-  "899273",
-  "934603",
-  "922936",
-  "934883",
-  "925525",
-  "910281",
-  "954544",
-  "907787",
-  "903349",
-  "923192",
-  "934713",
-  "923370",
-  "908115",
-  "918123",
-  "925493",
-  "958923",
-  "922612",
-  "908961",
-  "899525",
-  "898931",
-  "924983",
-  "924787",
-  "955096",
-  "935463",
-  "926171",
-  "910431",
-  "909439",
-  "936431",
-  "925305",
-  "925161",
-  "940364",
-  "925947",
-  "936331",
-  "907971",
-  "911529",
-  "935141",
-  "908121",
-  "954292",
-  "924371",
-  "936111",
-  "945655",
-  "927533",
-  "925413",
-  "898419",
-  "958591",
-  "927067",
-  "941186",
-  "953308",
-  "899749",
-  "923746",
-  "954902",
-  "925651",
-  "959612",
-  "910089",
-  "935903",
-  "899869",
-  "942771",
-  "970752",
-  "934911",
-  "923618",
-  "934981",
-  "934355",
-  "922652",
-  "902623",
-  "903465",
-  "903405",
-  "898479",
-  "925185",
-  "908501",
-  "908953",
-  "922714",
-  "925567",
-  "934539",
-  "925639",
-  "955156",
-  "936507",
-  "952892",
-  "945124",
-  "910701",
-  "910437",
-  "926847",
-  "935453",
-  "925291",
-  "910577",
-  "927963",
-  "940510",
-  "908933",
-  "926369",
-  "922476",
-  "925717",
-  "910259",
-  "940406",
-  "922750",
-  "945773",
-  "903139",
-  "927431",
-  "908715",
-  "954816",
-  "924553",
-  "935837",
-  "926969",
-  "923638",
-  "911407",
-  "936687",
-  "926261",
-  "953708",
-  "926103",
-  "908783",
-  "922482",
-  "953506",
-  "903497",
-  "899345",
-  "925915",
-  "954928",
-  "925263",
-  "924205",
-  "909071",
-  "927805",
-  "910663",
-  "899411",
-  "936449",
-  "926581",
-  "902907",
-  "898839",
-  "959244",
-  "926707",
-  "926479",
-  "910205",
-  "935501",
-  "925357",
-  "954356",
-  "935361",
-  "925119",
-  "925317",
-  "941044",
-  "941384",
-  "925425",
-  "924541",
-  "899799",
-  "924807",
-  "898409",
-  "909193",
-  "899117",
-  "907927",
-  "945567",
-  "924895",
-  "934735",
-  "927399",
-  "899105",
-  "897767",
-  "955018",
-  "899519",
-  "897803",
-  "945541",
-  "936975",
-  "910529",
-  "959224",
-  "928241",
-  "910383",
-  "908439",
-  "898038",
-  "925293",
-  "897839",
-  "925685",
-  "907621",
-  "959542",
-  "940538",
-  "953392",
-  "902555",
-  "935165",
-  "935071",
-  "958597",
-  "926157",
-  "940253",
-  "910091",
-  "945219",
-  "925797",
-  "945647",
-  "927137",
-  "928125",
-  "953476",
-  "940680",
-  "935193",
-  "953960",
-  "936967",
-  "909609",
-  "935185",
-  "970984",
-  "907759",
-  "909425",
-  "958932",
-  "902801",
-  "959284",
-  "925483",
-  "959230",
-  "935603",
-  "934375",
-  "935559",
-  "945595",
-  "903009",
-  "936565",
-  "971372",
-  "955082",
-  "899851",
-  "908605",
-  "903533",
-  "899641",
-  "908249",
-  "924909",
-  "910579",
-  "936903",
-  "907965",
-  "927499",
-  "959490",
-  "936851",
-  "927403",
-  "922516",
-  "926453",
-  "902673",
-  "911365",
-  "907679",
-  "971106",
-  "926861",
-  "942627",
-  "925879",
-  "927949",
-  "910739",
-  "923160",
-  "899019",
-  "935717",
-  "934841",
-  "925961",
-  "907719",
-  "911435",
-  "902817",
-  "954040",
-  "936785",
-  "952890",
-  "923122",
-  "953902",
-  "899905",
-  "909987",
-  "909933",
-  "924381",
-  "954628",
-  "903057",
-  "922912",
-  "945211",
-  "909393",
-  "908407",
-  "940962",
-  "927755",
-  "935961",
-  "911473",
-  "959306",
-  "940223",
-  "925809",
-  "902895",
-  "954436",
-  "925001",
-  "908131",
-  "940898",
-  "954632",
-  "924721",
-  "953766",
-  "959576",
-  "954842",
-  "953754",
-  "959278",
-  "940402",
-  "908019",
-  "908247",
-  "959020",
-  "925275",
-  "899663",
-  "927909",
-  "910407",
-  "943011",
-  "934727",
-  "909175",
-  "927899",
-  "926639",
-  "952920",
-  "925571",
-  "922834",
-  "927747",
-  "923666",
-  "922902",
-  "898751",
-  "922764",
-  "923356",
-  "970698",
-  "935533",
-  "955184",
-  "907925",
-  "970668",
-  "945407",
-  "923770",
-  "935821",
-  "925237",
-  "940828",
-  "925535",
-  "940422",
-  "927781",
-  "936367",
-  "925699",
-  "909145",
-  "909059",
-  "926005",
-  "898765",
-  "926381",
-  "908927",
-  "927215",
-  "899197",
-  "899803",
-  "959074",
-  "923008",
-  "924296",
-  "935861",
-  "926973",
-  "907961",
-  "908153",
-  "899531",
-  "926655",
-  "922708",
-  "925653",
-  "958316",
-  "924945",
-  "936077",
-  "935999",
-  "954742",
-  "936437",
-  "936263",
-  "923380",
-  "899677",
-  "936497",
-  "936989",
-  "909565",
-  "924613",
-  "934691",
-  "926023",
-  "910375",
-  "941062",
-  "954126",
-  "926979",
-  "952926",
-  "927459",
-  "925389",
-  "940410",
-  "959058",
-  "898787",
-  "907571",
-  "935773",
-  "959330",
-  "908841",
-  "923420",
-  "953188",
-  "953988",
-  "899049",
-  "953962",
-  "952874",
-  "902841",
-  "911249",
-  "935573",
-  "926221",
-  "954922",
-  "926567",
-  "934999",
-  "928045",
-  "936209",
-  "940794",
-  "910697",
-  "959550",
-  "954056",
-  "902783",
-  "910335",
-  "958691",
-  "940612",
-  "923390",
-  "909473",
-  "953362",
-  "953780",
-  "928183",
-  "908185",
-  "909093",
-  "899703",
-  "898339",
-  "970806",
-  "910207",
-  "936697",
-  "925713",
-  "970910",
-  "910319",
-  "943397",
-  "942890",
-  "927351",
-  "953610",
-  "923628",
-  "908081",
-  "936423",
-  "902449",
-  "927365",
-  "923092",
-  "902643",
-  "907973",
-  "943413",
-  "924573",
-  "899583",
-  "954626",
-  "923816",
-  "910761",
-  "908597",
-  "903035",
-  "923162",
-  "910389",
-  "943051",
-  "924413",
-  "922720",
-  "936961",
-  "927419",
-  "909403",
-  "959036",
-  "925543",
-  "909661",
-  "908327",
-  "945487",
-  "927203",
-  "898743",
-  "910341",
-  "923448",
-  "899087",
-  "898837",
-  "923164",
-  "899603",
-  "952990",
-  "934963",
-  "927483",
-  "936487",
-  "934491",
-  "908087",
-  "925015",
-  "923478",
-  "936651",
-  "934711",
-  "954252",
-  "935355",
-  "935645",
-  "953322",
-  "941290",
-  "923088",
-  "936849",
-  "909801",
-  "954604",
-  "924921",
-  "926335",
-  "923720",
-  "904123",
-  "934216",
-  "923568",
-  "908787",
-  "925091",
-  "959686",
-  "923346",
-  "953062",
-  "934951",
-  "928321",
-  "940942",
-  "923682",
-  "922656",
-  "935915",
-  "910119",
-  "953744",
-  "908415",
-  "907883",
-  "925595",
-  "911229",
-  "910347",
-  "926475",
-  "941080",
-  "927671",
-  "970958",
-  "935059",
-  "898883",
-  "953578",
-  "907797",
-  "953414",
-  "928269",
-  "926521",
-  "935413",
-  "927751",
-  "924789",
-  "909719",
-  "908843",
-  "959564",
-  "935801",
-  "953786",
-  "923498",
-  "903481",
-  "902707",
-  "899815",
-  "940532",
-  "942933",
-  "899597",
-  "922718",
-  "910429",
-  "953770",
-  "940344",
-  "959132",
-  "898150",
-  "934643",
-  "934291",
-  "923182",
-  "909495",
-  "941362",
-  "959164",
-  "923038",
-  "897783",
-  "899707",
-  "908875",
-  "923694",
-  "907773",
-  "902701",
-  "902691",
-  "928143",
-  "899011",
-  "925795",
-  "909781",
-  "902821",
-  "953946",
-  "899473",
-  "940952",
-  "953830",
-  "940378",
-  "911339",
-  "925889",
-  "953206",
-  "942931",
-  "924811",
-  "958264",
-  "925985",
-  "909277",
-  "935545",
-  "927883",
-  "935499",
-  "958998",
-  "934843",
-  "925659",
-  "936555",
-  "943403",
-  "902741",
-  "953950",
-  "943595",
-  "898018",
-  "926569",
-  "935511",
-  "902859",
-  "928109",
-  "935179",
-  "922570",
-  "899633",
-  "910313",
-  "899157",
-  "945605",
-  "908445",
-  "952922",
-  "925907",
-  "898963",
-  "935521",
-  "934977",
-  "910583",
-  "926343",
-  "907895",
-  "924937",
-  "954306",
-  "935435",
-  "927381",
-  "926137",
-  "924589",
-  "940438",
-  "923722",
-  "907687",
-  "934301",
-  "927877",
-  "959368",
-  "910629",
-  "908483",
-  "935217",
-  "924633",
-  "971198",
-  "941158",
-  "959018",
-  "935527",
-  "954970",
-  "934443",
-  "954826",
-  "934220",
-  "943343",
-  "934162",
-  "925481",
-  "908157",
-  "926135",
-  "909357",
-  "899493",
-  "911543",
-  "924973",
-  "899585",
-  "908301",
-  "908885",
-  "927321",
-  "907829",
-  "925083",
-  "908941",
-  "923432",
-  "940500",
-  "953860",
-  "945745",
-  "925269",
-  "924731",
-  "952854",
-  "945361",
-  "953718",
-  "927653",
-  "936415",
-  "936335",
-  "898919",
-  "959518",
-  "954638",
-  "935449",
-  "910501",
-  "908063",
-  "954708",
-  "923706",
-  "970708",
-  "935879",
-  "927233",
-  "908363",
-  "936215",
-  "923532",
-  "923726",
-  "902395",
-  "924527",
-  "923236",
-  "958575",
-  "936755",
-  "898991",
-  "910465",
-  "925165",
-  "923210",
-  "911295",
-  "937119",
-  "908769",
-  "897871",
-  "925787",
-  "925757",
-  "918042",
-  "941064",
-  "908189",
-  "935825",
-  "923430",
-  "954106",
-  "954478",
-  "945411",
-  "945781",
-  "935327",
-  "908659",
-  "940860",
-  "935229",
-  "909039",
-  "934439",
-  "934467",
-  "923476",
-  "945415",
-  "941048",
-  "923196",
-  "940870",
-  "940368",
-  "927129",
-  "898943",
-  "925521",
-  "926359",
-  "959514",
-  "971352",
-  "955134",
-  "899481",
-  "898447",
-  "954870",
-  "922530",
-  "898581",
-  "911317",
-  "940716",
-  "936443",
-  "936141",
-  "924965",
-  "909105",
-  "898417",
-  "959238",
-  "910285",
-  "936183",
-  "953350",
-  "926891",
-  "902785",
-  "926085",
-  "899879",
-  "970970",
-  "907831",
-  "898801",
-  "941136",
-  "935045",
-  "907693",
-  "927353",
-  "945225",
-  "899263",
-  "940424",
-  "934637",
-  "958288",
-  "937123",
-  "934859",
-  "908611",
-  "953728",
-  "910159",
-  "958593",
-  "934279",
-  "959692",
-  "897771",
-  "925065",
-  "945727",
-  "934311",
-  "909143",
-  "954232",
-  "925301",
-  "934151",
-  "955521",
-  "955548",
-  "945489",
-  "934741",
-  "940488",
-  "925655",
-  "937031",
-  "927613",
-  "908825",
-  "898613",
-  "953456",
-  "940630",
-  "942925",
-  "936779",
-  "904297",
-  "902387",
-  "899625",
-  "942667",
-  "899191",
-  "924653",
-  "899747",
-  "898381",
-  "902633",
-  "959658",
-  "959356",
-  "954294",
-  "942909",
-  "908295",
-  "943437",
-  "928251",
-  "922762",
-  "922552",
-  "936665",
-  "923352",
-  "940326",
-  "898266",
-  "926751",
-  "940688",
-  "954226",
-  "925929",
-  "922790",
-  "925949",
-  "911483",
-  "934269",
-  "936879",
-  "934297",
-  "926091",
-  "908661",
-  "908271",
-  "898214",
-  "925073",
-  "910327",
-  "908801",
-  "908719",
-  "898407",
-  "927699",
-  "910025",
-  "955154",
-  "925891",
-  "909141",
-  "940558",
-  "918152",
-  "909379",
-  "908299",
-  "953992",
-  "925093",
-  "924903",
-  "953862",
-  "940628",
-  "926535",
-  "910621",
-  "899013",
-  "926037",
-  "923580",
-  "908239",
-  "954328",
-  "902893",
-  "926409",
-  "923458",
-  "953720",
-  "923502",
-  "899275",
-  "952814",
-  "935153",
-  "926083",
-  "954524",
-  "953722",
-  "910139",
-  "903746",
-  "922888",
-  "954182",
-  "958320",
-  "953684",
-  "909983",
-  "958631",
-  "923716",
-  "945292",
-  "910417",
-  "942591",
-  "926529",
-  "908945",
-  "900799",
-  "971394",
-  "927357",
-  "971360",
-  "898957",
-  "911449",
-  "953154",
-  "902825",
-  "899321",
-  "971022",
-  "934703",
-  "898178",
-  "926595",
-  "943630",
-  "924457",
-  "907915",
-  "955224",
-  "925931",
-  "925127",
-  "908513",
-  "898579",
-  "953060",
-  "927173",
-  "925785",
-  "910295",
-  "927285",
-  "908423",
-  "943041",
-  "943617",
-  "926341",
-  "902483",
-  "928141",
-  "910717",
-  "924763",
-  "936919",
-  "910587",
-  "958197",
-  "953528",
-  "899451",
-  "935805",
-  "970802",
-  "897795",
-  "928261",
-  "928211",
-  "898276",
-  "971010",
-  "940736",
-  "925711",
-  "924519",
-  "940404",
-  "898925",
-  "926169",
-  "926965",
-  "945316",
-  "902403",
-  "926389",
-  "935003",
-  "953532",
-  "925491",
-  "959400",
-  "936225",
-  "927103",
-  "935157",
-  "936567",
-  "953010",
-  "911175",
-  "910499",
-  "908037",
-  "936499",
-  "953540",
-  "945485",
-  "940934",
-  "936515",
-  "936465",
-  "954688",
-  "925501",
-  "897819",
-  "922616",
-  "902929",
-  "954646",
-  "909697",
-  "970826",
-  "902609",
-  "941334",
-  "926705",
-  "927355",
-  "909639",
-  "924755",
-  "907627",
-  "911363",
-  "970996",
-  "941470",
-  "959076",
-  "954212",
-  "924587",
-  "924917",
-  "907567",
-  "928005",
-  "971334",
-  "954002",
-  "935737",
-  "925423",
-  "910171",
-  "953054",
-  "936131",
-  "937053",
-  "925835",
-  "953852",
-  "908013",
-  "934769",
-  "953024",
-  "908215",
-  "924769",
-  "927187",
-  "936319",
-  "909487",
-  "902715",
-  "935319",
-  "926151",
-  "922942",
-  "898327",
-  "954280",
-  "934833",
-  "907911",
-  "927689",
-  "953140",
-  "927517",
-  "926709",
-  "926061",
-  "970982",
-  "958294",
-  "923598",
-  "926247",
-  "925261",
-  "910711",
-  "940808",
-  "910707",
-  "971008",
-  "934863",
-  "924247",
-  "898531",
-  "909715",
-  "936633",
-  "908877",
-  "954392",
-  "902355",
-  "927629",
-  "923276",
-  "936199",
-  "924735",
-  "943551",
-  "923304",
-  "940640",
-  "910225",
-  "954932",
-  "940560",
-  "924509",
-  "922992",
-  "925201",
-  "958330",
-  "925117",
-  "926507",
-  "902729",
-  "959366",
-  "926873",
-  "928185",
-  "907659",
-  "898663",
-  "954986",
-  "935377",
-  "925035",
-  "959050",
-  "909673",
-  "899351",
-  "953686",
-  "943479",
-  "955066",
-  "908335",
-  "936421",
-  "910269",
-  "924473",
-  "909847",
-  "899639",
-  "927901",
-  "928067",
-  "955166",
-  "911213",
-  "898507",
-  "936337",
-  "970724",
-  "934581",
-  "908265",
-  "909455",
-  "926741",
-  "958292",
-  "922596",
-  "910395",
-  "908503",
-  "922554",
-  "925683",
-  "959282",
-  "958675",
-  "922840",
-  "898565",
-  "909113",
-  "908807",
-  "945511",
-  "923632",
-  "970744",
-  "908601",
-  "959066",
-  "908195",
-  "909613",
-  "953314",
-  "958683",
-  "926559",
-  "936285",
-  "908737",
-  "909885",
-  "954700",
-  "936097",
-  "909229",
-  "897986",
-  "910377",
-  "925077",
-  "940516",
-  "924821",
-  "953246",
-  "925679",
-  "909861",
-  "940840",
-  "898487",
-  "945801",
-  "936577",
-  "946571",
-  "958254",
-  "941132",
-  "926609",
-  "923404",
-  "907891",
-  "936123",
-  "925197",
-  "925735",
-  "925139",
-  "943258",
-  "970754",
-  "958342",
-  "927975",
-  "926677",
-  "902445",
-  "923126",
-  "910277",
-  "928095",
-  "926543",
-  "942711",
-  "924681",
-  "945563",
-  "908603",
-  "936369",
-  "927875",
-  "959516",
-  "910569",
-  "898653",
-  "925587",
-  "923704",
-  "935877",
-  "909729",
-  "959128",
-  "922510",
-  "955358",
-  "908641",
-  "934321",
-  "952988",
-  "935855",
-  "907737",
-  "936607",
-  "934413",
-  "971368",
-  "927165",
-  "903071",
-  "898967",
-  "897879",
-  "926883",
-  "902481",
-  "927503",
-  "925803",
-  "925637",
-  "923700",
-  "902469",
-  "935719",
-  "934789",
-  "908469",
-  "945771",
-  "909817",
-  "924933",
-  "936661",
-  "926793",
-  "926433",
-  "908723",
-  "903141",
-  "927757",
-  "952918",
-  "936769",
-  "925471",
-  "926463",
-  "924515",
-  "934927",
-  "953334",
-  "908293",
-  "922728",
-  "959038",
-  "953530",
-  "899555",
-  "908921",
-  "923762",
-  "909207",
-  "934475",
-  "935619",
-  "934509",
-  "953344",
-  "899055",
-  "924213",
-  "922710",
-  "924897",
-  "945585",
-  "898985",
-  "959256",
-  "955202",
-  "909569",
-  "954854",
-  "923262",
-  "899743",
-  "923214",
-  "898805",
-  "954344",
-  "935769",
-  "910111",
-  "954240",
-  "953824",
-  "923184",
-  "907727",
-  "953666",
-  "927037",
-  "923672",
-  "902927",
-  "909137",
-  "959192",
-  "927763",
-  "927485",
-  "955306",
-  "940366",
-  "910759",
-  "936827",
-  "924435",
-  "899181",
-  "942587",
-  "926659",
-  "924869",
-  "908535",
-  "926187",
-  "922802",
-  "959190",
-  "958545",
-  "940900",
-  "924611",
-  "925459",
-  "971272",
-  "925497",
-  "902465",
-  "945519",
-  "934565",
-  "908007",
-  "959210",
-  "971346",
-  "902655",
-  "940452",
-  "899307",
-  "935341",
-  "909687",
-  "971060",
-  "954022",
-  "925549",
-  "909339",
-  "953352",
-  "952836",
-  "911259",
-  "953608",
-  "925167",
-  "934527",
-  "911497",
-  "953474",
-  "954366",
-  "954206",
-  "909599",
-  "924387",
-  "902495",
-  "923284",
-  "935943",
-  "922944",
-  "955150",
-  "923422",
-  "925289",
-  "924211",
-  "925299",
-  "911223",
-  "955318",
-  "908549",
-  "925611",
-  "954368",
-  "925045",
-  "970730",
-  "954304",
-  "940602",
-  "898200",
-  "959572",
-  "936365",
-  "926769",
-  "922980",
-  "923854",
-  "898599",
-  "927693",
-  "953626",
-  "927201",
-  "927275",
-  "927155",
-  "909411",
-  "923472",
-  "926325",
-  "935797",
-  "922694",
-  "909927",
-  "928245",
-  "954712",
-  "935027",
-  "925855",
-  "945839",
-  "898783",
-  "909443",
-  "902843",
-  "899029",
-  "959422",
-  "927223",
-  "959696",
-  "924913",
-  "936283",
-  "955563",
-  "902561",
-  "959526",
-  "910003",
-  "927607",
-  "925979",
-  "923488",
-  "926009",
-  "935991",
-  "934895",
-  "925115",
-  "909875",
-  "924471",
-  "945435",
-  "927225",
-  "926819",
-  "923248",
-  "925945",
-  "909079",
-  "928121",
-  "923266",
-  "927101",
-  "908441",
-  "954618",
-  "910257",
-  "971328",
-  "955352",
-  "953668",
-  "926025",
-  "898989",
-  "935191",
-  "926571",
-  "945799",
-  "926985",
-  "925325",
-  "924863",
-  "952972",
-  "971156",
-  "954528",
-  "936709",
-  "928283",
-  "952998",
-  "899589",
-  "899095",
-  "910015",
-  "927643",
-  "908255",
-  "909063",
-  "922648",
-  "923310",
-  "911525",
-  "909127",
-  "954760",
-  "935119",
-  "926753",
-  "924567",
-  "924835",
-  "909447",
-  "945159",
-  "898144",
-  "902533",
-  "934659",
-  "927095",
-  "909675",
-  "908049",
-  "940346",
-  "922682",
-  "953198",
-  "954038",
-  "953696",
-  "907749",
-  "959254",
-  "934787",
-  "935139",
-  "926831",
-  "959492",
-  "954118",
-  "936839",
-  "911197",
-  "970664",
-  "958685",
-  "953386",
-  "937011",
-  "940980",
-  "953566",
-  "943401",
-  "935779",
-  "935781",
-  "959684",
-  "970632",
-  "935589",
-  "927895",
-  "971412",
-  "908243",
-  "958230",
-  "928119",
-  "927495",
-  "922598",
-  "927921",
-  "927967",
-  "935333",
-  "923028",
-  "925341",
-  "942671",
-  "935285",
-  "926439",
-  "902507",
-  "925265",
-  "959714",
-  "925583",
-  "970720",
-  "953628",
-  "909551",
-  "925623",
-  "952938",
-  "925703",
-  "911649",
-  "971016",
-  "936167",
-  "910419",
-  "937087",
-  "943455",
-  "935483",
-  "909973",
-  "955206",
-  "935199",
-  "934693",
-  "909779",
-  "925721",
-  "924507",
-  "910149",
-  "910057",
-  "955234",
-  "925307",
-  "954474",
-  "923178",
-  "955130",
-  "934373",
-  "940890",
-  "902851",
-  "955104",
-  "899303",
-  "936203",
-  "953680",
-  "945431",
-  "924581",
-  "923768",
-  "907739",
-  "945258",
-  "909435",
-  "940752",
-  "945551",
-  "924657",
-  "909159",
-  "898228",
-  "952958",
-  "925063",
-  "902959",
-  "922432",
-  "935207",
-  "899897",
-  "925999",
-  "935893",
-  "927733",
-  "910315",
-  "952956",
-  "942719",
-  "927617",
-  "970792",
-  "922488",
-  "899695",
-  "924373",
-  "909571",
-  "903469",
-  "898240",
-  "928357",
-  "923000",
-  "924365",
-  "971216",
-  "925953",
-  "923190",
-  "936435",
-  "959510",
-  "954342",
-  "924411",
-  "923410",
-  "936783",
-  "940266",
-  "953226",
-  "898757",
-  "971090",
-  "909947",
-  "907777",
-  "936187",
-  "911393",
-  "910039",
-  "923114",
-  "935537",
-  "955609",
-  "936739",
-  "910779",
-  "937043",
-  "943469",
-  "909749",
-  "922810",
-  "959272",
-  "909005",
-  "922908",
-  "909359",
-  "903125",
-  "971176",
-  "910381",
-  "909615",
-  "903007",
-  "935159",
-  "899027",
-  "934689",
-  "927423",
-  "924827",
-  "924429",
-  "936293",
-  "922560",
-  "923586",
-  "923288",
-  "953878",
-  "909035",
-  "898975",
-  "954330",
-  "910565",
-  "899569",
-  "936513",
-  "924989",
-  "971208",
-  "899449",
-  "954168",
-  "923780",
-  "922546",
-  "959408",
-  "935411",
-  "925967",
-  "954576",
-  "923362",
-  "924741",
-  "902377",
-  "940818",
-  "925017",
-  "959522",
-  "910241",
-  "898222",
-  "909269",
-  "898174",
-  "954926",
-  "945290",
-  "927829",
-  "908805",
-  "946604",
-  "954864",
-  "898090",
-  "958334",
-  "910599",
-  "945555",
-  "899375",
-  "959444",
-  "959380",
-  "923680",
-  "925819",
-  "970838",
-  "954910",
-  "909171",
-  "954562",
-  "927729",
-  "952858",
-  "908429",
-  "927715",
-  "909827",
-  "925059",
-  "941268",
-  "923864",
-  "923786",
-  "923480",
-  "910439",
-  "923792",
-  "935351",
-  "903123",
-  "899887",
-  "927397",
-  "937009",
-  "934923",
-  "971342",
-  "941008",
-  "935441",
-  "910153",
-  "923294",
-  "940650",
-  "943007",
-  "899007",
-  "955296",
-  "954312",
-  "936757",
-  "925541",
-  "922684",
-  "902357",
-  "959434",
-  "935363",
-  "926867",
-  "898357",
-  "924256",
-  "923328",
-  "927299",
-  "937093",
-  "935339",
-  "923602",
-  "970722",
-  "934903",
-  "923724",
-  "911355",
-  "945797",
-  "970974",
-  "908689",
-  "924925",
-  "943417",
-  "923684",
-  "926039",
-  "924565",
-  "911267",
-  "908287",
-  "899499",
-  "899873",
-  "926243",
-  "899577",
-  "937019",
-  "953730",
-  "945615",
-  "902779",
-  "954578",
-  "907607",
-  "926347",
-  "954998",
-  "899469",
-  "954108",
-  "927863",
-  "940295",
-  "926833",
-  "935741",
-  "927071",
-  "953948",
-  "924619",
-  "908127",
-  "936705",
-  "909555",
-  "959072",
-  "952904",
-  "934745",
-  "928053",
-  "927603",
-  "898895",
-  "898573",
-  "899327",
-  "952964",
-  "940884",
-  "899645",
-  "927561",
-  "898122",
-  "935661",
-  "936301",
-  "898134",
-  "908963",
-  "898977",
-  "971168",
-  "941208",
-  "899383",
-  "936581",
-  "909647",
-  "940756",
-  "935283",
-  "926777",
-  "959046",
-  "923156",
-  "959364",
-  "927065",
-  "925047",
-  "936417",
-  "926067",
-  "907957",
-  "945262",
-  "940856",
-  "908859",
-  "927343",
-  "923112",
-  "935909",
-  "924899",
-  "909581",
-  "910459",
-  "907671",
-  "902653",
-  "924603",
-  "899559",
-  "907675",
-  "934671",
-  "925241",
-  "952804",
-  "902425",
-  "940588",
-  "925101",
-  "936303",
-  "899659",
-  "923844",
-  "942847",
-  "971116",
-  "908219",
-  "926887",
-  "899377",
-  "907667",
-  "898365",
-  "935935",
-  "935265",
-  "898423",
-  "922634",
-  "926799",
-  "898799",
-  "908085",
-  "940832",
-  "934337",
-  "910423",
-  "941072",
-  "936291",
-  "923090",
-  "925199",
-  "898735",
-  "927119",
-  "926451",
-  "922820",
-  "899785",
-  "959536",
-  "898769",
-  "935169",
-  "909485",
-  "909815",
-  "899573",
-  "953384",
-  "935673",
-  "934403",
-  "899207",
-  "955170",
-  "925407",
-  "934571",
-  "955188",
-  "940522",
-  "943009",
-  "928065",
-  "935293",
-  "954326",
-  "910051",
-  "940530",
-  "959116",
-  "924393",
-  "971274",
-  "924915",
-  "911243",
-  "952880",
-  "925597",
-  "923772",
-  "924999",
-  "940450",
-  "926051",
-  "922958",
-  "959410",
-  "954412",
-  "927555",
-  "909689",
-  "935771",
-  "925021",
-  "925007",
-  "943065",
-  "926111",
-  "924851",
-  "924423",
-  "971246",
-  "959120",
-  "923050",
-  "940362",
-  "936189",
-  "925661",
-  "903457",
-  "899709",
-  "927205",
-  "926267",
-  "953448",
-  "940566",
-  "934127",
-  "934907",
-  "935297",
-  "935417",
-  "953864",
-  "925693",
-  "924523",
-  "909667",
-  "898082",
-  "935597",
-  "959672",
-  "899155",
-  "911309",
-  "908907",
-  "899667",
-  "941110",
-  "928117",
-  "926963",
-  "923134",
-  "927123",
-  "899301",
-  "924747",
-  "898010",
-  "934899",
-  "952942",
-  "925253",
-  "935475",
-  "909199",
-  "899575",
-  "898383",
-  "898264",
-  "927231",
-  "945609",
-  "922738",
-  "941036",
-  "910675",
-  "934717",
-  "908353",
-  "903109",
-  "910936",
-  "898373",
-  "954026",
-  "925151",
-  "909623",
-  "927813",
-  "926119",
-  "909603",
-  "898909",
-  "924949",
-  "911463",
-  "958641",
-  "945603",
-  "959442",
-  "943481",
-  "907843",
-  "954380",
-  "926313",
-  "899409",
-  "945579",
-  "910393",
-  "971286",
-  "910773",
-  "970704",
-  "955228",
-  "953138",
-  "923810",
-  "923326",
-  "958268",
-  "955334",
-  "902429",
-  "970960",
-  "970842",
-  "954314",
-  "934523",
-  "926217",
-  "902463",
-  "925923",
-  "903145",
-  "955574",
-  "935481",
-  "927791",
-  "924957",
-  "897851",
-  "954224",
-  "924425",
-  "910073",
-  "899435",
-  "936951",
-  "922518",
-  "953854",
-  "928291",
-  "971192",
-  "953174",
-  "942603",
-  "936117",
-  "926031",
-  "908225",
-  "959374",
-  "925071",
-  "955300",
-  "943409",
-  "910475",
-  "928253",
-  "937061",
-  "899063",
-  "898078",
-  "959426",
-  "925765",
-  "910019",
-  "934733",
-  "911417",
-  "908821",
-  "924577",
-  "971414",
-  "908687",
-  "925731",
-  "959496",
-  "923054",
-  "902635",
-  "940662",
-  "935941",
-  "953942",
-  "911273",
-  "945270",
-  "909845",
-  "970994",
-  "928113",
-  "959552",
-  "954414",
-  "925345",
-  "954064",
-  "909045",
-  "898389",
-  "954572",
-  "941084",
-];
+    "899407",
+    "936453",
+    "923554",
+    "935267",
+    "959298",
+    "955046",
+    "971406",
+    "899741",
+    "908809",
+    "954744",
+    "924230",
+    "909081",
+    "943391",
+    "940834",
+    "925171",
+    "898665",
+    "922540",
+    "908355",
+    "940314",
+    "954008",
+    "908387",
+    "927009",
+    "958970",
+    "940596",
+    "936247",
+    "925531",
+    "954734",
+    "924961",
+    "899821",
+    "934303",
+    "927295",
+    "953276",
+    "927753",
+    "923564",
+    "954430",
+    "954772",
+    "936387",
+    "936725",
+    "954892",
+    "935053",
+    "935947",
+    "926983",
+    "945385",
+    "923642",
+    "923078",
+    "955607",
+    "926949",
+    "935167",
+    "923226",
+    "935677",
+    "924531",
+    "953520",
+    "903091",
+    "934331",
+    "935523",
+    "908633",
+    "954016",
+    "934397",
+    "910785",
+    "903029",
+    "945465",
+    "903381",
+    "910017",
+    "935873",
+    "971052",
+    "935803",
+    "959464",
+    "940584",
+    "908123",
+    "953812",
+    "935591",
+    "911343",
+    "898152",
+    "898333",
+    "936017",
+    "910719",
+    "898495",
+    "970682",
+    "907539",
+    "898246",
+    "927029",
+    "943483",
+    "936075",
+    "925227",
+    "899231",
+    "940930",
+    "945735",
+    "934433",
+    "907709",
+    "959300",
+    "923142",
+    "908001",
+    "959204",
+    "936151",
+    "907535",
+    "926421",
+    "953016",
+    "926829",
+    "923730",
+    "954434",
+    "935025",
+    "910103",
+    "927535",
+    "902931",
+    "899579",
+    "909911",
+    "908547",
+    "934381",
+    "910005",
+    "927659",
+    "936505",
+    "927547",
+    "909423",
+    "940758",
+    "911215",
+    "910059",
+    "926603",
+    "943001",
+    "924469",
+    "903389",
+    "945547",
+    "940678",
+    "926615",
+    "954382",
+    "953498",
+    "926181",
+    "903043",
+    "908319",
+    "936099",
+    "935973",
+    "903105",
+    "922688",
+    "909027",
+    "934979",
+    "953908",
+    "958623",
+    "954942",
+    "911569",
+    "935359",
+    "908399",
+    "926203",
+    "909583",
+    "899433",
+    "909791",
+    "935723",
+    "924495",
+    "936371",
+    "970814",
+    "954164",
+    "922494",
+    "899701",
+    "898915",
+    "955180",
+    "924713",
+    "908025",
+    "908767",
+    "970648",
+    "941130",
+    "935309",
+    "971096",
+    "926875",
+    "945349",
+    "942894",
+    "918132",
+    "955286",
+    "940600",
+    "953632",
+    "970864",
+    "925329",
+    "902971",
+    "953714",
+    "945429",
+    "934497",
+    "910757",
+    "954558",
+    "943593",
+    "940992",
+    "958189",
+    "911643",
+    "899299",
+    "927913",
+    "925397",
+    "925355",
+    "971330",
+    "909889",
+    "902709",
+    "911479",
+    "936063",
+    "910651",
+    "909631",
+    "941112",
+    "934557",
+    "899805",
+    "922990",
+    "923806",
+    "911173",
+    "926099",
+    "959246",
+    "936805",
+    "899069",
+    "953682",
+    "971152",
+    "945695",
+    "898309",
+    "935899",
+    "935039",
+    "953376",
+    "940356",
+    "924669",
+    "898425",
+    "954204",
+    "955194",
+    "955162",
+    "954348",
+    "910575",
+    "902799",
+    "923138",
+    "954960",
+    "924557",
+    "942953",
+    "941116",
+    "954716",
+    "926869",
+    "910545",
+    "954092",
+    "927989",
+    "959488",
+    "909747",
+    "924873",
+    "941198",
+    "910363",
+    "927305",
+    "954296",
+    "926481",
+    "907769",
+    "924875",
+    "959594",
+    "927257",
+    "909009",
+    "907633",
+    "927663",
+    "911285",
+    "936179",
+    "925025",
+    "908475",
+    "898807",
+    "971018",
+    "943566",
+    "923506",
+    "922690",
+    "959494",
+    "953662",
+    "908717",
+    "953082",
+    "909415",
+    "945725",
+    "955032",
+    "945689",
+    "970816",
+    "898034",
+    "899021",
+    "907885",
+    "924939",
+    "936579",
+    "936257",
+    "909915",
+    "928139",
+    "902601",
+    "936917",
+    "940322",
+    "952864",
+    "941026",
+    "907855",
+    "910187",
+    "911613",
+    "927529",
+    "923224",
+    "911239",
+    "934607",
+    "934871",
+    "923512",
+    "897990",
+    "922680",
+    "909115",
+    "970914",
+    "940938",
+    "924275",
+    "971138",
+    "940690",
+    "935921",
+    "908905",
+    "954116",
+    "935507",
+    "924391",
+    "898254",
+    "940456",
+    "935713",
+    "934391",
+    "945713",
+    "924893",
+    "924889",
+    "926995",
+    "923398",
+    "934617",
+    "936545",
+    "942911",
+    "899195",
+    "908515",
+    "945757",
+    "898168",
+    "927411",
+    "923068",
+    "903157",
+    "927647",
+    "910709",
+    "959622",
+    "936429",
+    "934585",
+    "927211",
+    "899711",
+    "898875",
+    "910219",
+    "910155",
+    "934669",
+    "935983",
+    "922626",
+    "945244",
+    "926661",
+    "908511",
+    "943039",
+    "928107",
+    "941142",
+    "908701",
+    "909169",
+    "899871",
+    "910571",
+    "927035",
+    "927939",
+    "908939",
+    "955204",
+    "924859",
+    "910317",
+    "924785",
+    "936127",
+    "936067",
+    "945651",
+    "935471",
+    "959312",
+    "910795",
+    "971370",
+    "935057",
+    "959460",
+    "934525",
+    "926483",
+    "909131",
+    "955158",
+    "953914",
+    "940446",
+    "923674",
+    "897755",
+    "936473",
+    "927521",
+    "953354",
+    "899419",
+    "941152",
+    "954790",
+    "934283",
+    "902665",
+    "899537",
+    "945215",
+    "925335",
+    "922724",
+    "945501",
+    "923130",
+    "936685",
+    "926757",
+    "926683",
+    "940926",
+    "934593",
+    "927229",
+    "954388",
+    "926315",
+    "899361",
+    "926305",
+    "953804",
+    "924841",
+    "909679",
+    "936891",
+    "927621",
+    "927051",
+    "934973",
+    "922618",
+    "958677",
+    "922692",
+    "908237",
+    "922430",
+    "908107",
+    "936049",
+    "899517",
+    "953296",
+    "967281",
+    "959634",
+    "935551",
+    "925697",
+    "923790",
+    "899253",
+    "902611",
+    "941140",
+    "934407",
+    "925145",
+    "935357",
+    "903107",
+    "923846",
+    "902675",
+    "936791",
+    "898349",
+    "935173",
+    "899725",
+    "928317",
+    "954672",
+    "898445",
+    "926207",
+    "909033",
+    "928103",
+    "924459",
+    "902699",
+    "908729",
+    "908417",
+    "954052",
+    "958693",
+    "903860",
+    "911297",
+    "926339",
+    "935767",
+    "923152",
+    "959666",
+    "959670",
+    "935295",
+    "911453",
+    "953102",
+    "955330",
+    "970920",
+    "908623",
+    "909777",
+    "955060",
+    "902875",
+    "936913",
+    "898745",
+    "910203",
+    "927157",
+    "898198",
+    "926345",
+    "910243",
+    "910191",
+    "899793",
+    "945821",
+    "902485",
+    "971298",
+    "955370",
+    "955587",
+    "902829",
+    "899689",
+    "898351",
+    "934429",
+    "935115",
+    "898715",
+    "936219",
+    "927725",
+    "926633",
+    "903101",
+    "899339",
+    "924997",
+    "908221",
+    "926469",
+    "936547",
+    "953876",
+    "910123",
+    "926743",
+    "954670",
+    "909353",
+    "941270",
+    "955050",
+    "937083",
+    "907931",
+    "943597",
+    "927447",
+    "927167",
+    "943055",
+    "954640",
+    "936115",
+    "924963",
+    "923230",
+    "908371",
+    "954766",
+    "925515",
+    "908269",
+    "940702",
+    "936773",
+    "952954",
+    "953288",
+    "934721",
+    "908563",
+    "910359",
+    "902363",
+    "922734",
+    "927709",
+    "922970",
+    "943574",
+    "971000",
+    "899655",
+    "910543",
+    "924323",
+    "909303",
+    "898797",
+    "903173",
+    "922744",
+    "898995",
+    "926629",
+    "971300",
+    "936775",
+    "935037",
+    "910811",
+    "924709",
+    "936059",
+    "899529",
+    "971322",
+    "926835",
+    "959320",
+    "927991",
+    "924953",
+    "927885",
+    "908027",
+    "907857",
+    "909745",
+    "908747",
+    "970770",
+    "898649",
+    "934873",
+    "924845",
+    "936595",
+    "942892",
+    "936793",
+    "934275",
+    "970916",
+    "958633",
+    "926607",
+    "908187",
+    "942993",
+    "927253",
+    "959386",
+    "902549",
+    "970676",
+    "928041",
+    "925833",
+    "909669",
+    "928133",
+    "934599",
+    "959562",
+    "902957",
+    "899393",
+    "959416",
+    "925841",
+    "941010",
+    "955172",
+    "945743",
+    "936623",
+    "959342",
+    "937111",
+    "898617",
+    "940984",
+    "910197",
+    "922506",
+    "934232",
+    "898293",
+    "926759",
+    "923550",
+    "959022",
+    "953192",
+    "927761",
+    "926213",
+    "923520",
+    "897835",
+    "911619",
+    "910283",
+    "911577",
+    "970728",
+    "953224",
+    "943395",
+    "909513",
+    "940974",
+    "935469",
+    "927149",
+    "910627",
+    "958611",
+    "903345",
+    "907845",
+    "941428",
+    "909849",
+    "955114",
+    "936081",
+    "955008",
+    "970854",
+    "934236",
+    "903167",
+    "911269",
+    "955232",
+    "958655",
+    "936149",
+    "898559",
+    "927911",
+    "936643",
+    "922776",
+    "910177",
+    "958599",
+    "908935",
+    "898503",
+    "902547",
+    "934309",
+    "899771",
+    "934559",
+    "937003",
+    "934451",
+    "935865",
+    "898763",
+    "924907",
+    "909707",
+    "953080",
+    "945507",
+    "927325",
+    "924389",
+    "940454",
+    "923116",
+    "925649",
+    "902805",
+    "934605",
+    "907605",
+    "898817",
+    "903489",
+    "942939",
+    "940310",
+    "936897",
+    "924739",
+    "910135",
+    "898869",
+    "970782",
+    "926033",
+    "899213",
+    "923412",
+    "935211",
+    "925769",
+    "935227",
+    "909231",
+    "922952",
+    "928029",
+    "927027",
+    "942884",
+    "922946",
+    "958310",
+    "922752",
+    "909463",
+    "908983",
+    "935237",
+    "926943",
+    "902385",
+    "923338",
+    "959532",
+    "899065",
+    "959032",
+    "954736",
+    "942923",
+    "899277",
+    "903501",
+    "934619",
+    "909183",
+    "898415",
+    "922778",
+    "908009",
+    "923268",
+    "945629",
+    "934661",
+    "926695",
+    "911489",
+    "924673",
+    "898238",
+    "953910",
+    "911155",
+    "942987",
+    "958681",
+    "959002",
+    "925109",
+    "902787",
+    "935987",
+    "926547",
+    "925179",
+    "922726",
+    "911513",
+    "934395",
+    "909821",
+    "953036",
+    "908673",
+    "908553",
+    "954448",
+    "952936",
+    "953214",
+    "902991",
+    "902383",
+    "909561",
+    "902661",
+    "909147",
+    "902997",
+    "923718",
+    "899189",
+    "934401",
+    "953934",
+    "945561",
+    "907879",
+    "924883",
+    "958941",
+    "940854",
+    "945419",
+    "953252",
+    "935097",
+    "954944",
+    "899283",
+    "926763",
+    "927311",
+    "925991",
+    "908071",
+    "908241",
+    "934307",
+    "925273",
+    "970884",
+    "909167",
+    "936915",
+    "925917",
+    "926937",
+    "899801",
+    "898597",
+    "910479",
+    "940552",
+    "935613",
+    "903049",
+    "907975",
+    "927539",
+    "903099",
+    "971150",
+    "898603",
+    "899247",
+    "928271",
+    "958298",
+    "940360",
+    "902587",
+    "898835",
+    "934949",
+    "927445",
+    "926549",
+    "923860",
+    "907945",
+    "908773",
+    "924545",
+    "922938",
+    "935395",
+    "899735",
+    "910267",
+    "953280",
+    "924617",
+    "936409",
+    "953042",
+    "934208",
+    "935763",
+    "910325",
+    "959276",
+    "927093",
+    "926357",
+    "945569",
+    "908339",
+    "925487",
+    "907651",
+    "945357",
+    "924767",
+    "898651",
+    "953210",
+    "899397",
+    "908795",
+    "971102",
+    "936083",
+    "942663",
+    "899295",
+    "909701",
+    "936327",
+    "926951",
+    "937113",
+    "953262",
+    "942983",
+    "899889",
+    "954852",
+    "908159",
+    "935347",
+    "953584",
+    "902441",
+    "958224",
+    "952812",
+    "907947",
+    "943411",
+    "907731",
+    "954222",
+    "898190",
+    "934259",
+    "902955",
+    "971088",
+    "936691",
+    "925181",
+    "934749",
+    "927903",
+    "959482",
+    "924401",
+    "922844",
+    "910289",
+    "899399",
+    "958961",
+    "936085",
+    "953134",
+    "923692",
+    "898913",
+    "909313",
+    "909215",
+    "953258",
+    "934667",
+    "908073",
+    "970808",
+    "934293",
+    "910193",
+    "903493",
+    "958284",
+    "934597",
+    "928207",
+    "909837",
+    "909299",
+    "935271",
+    "955186",
+    "940780",
+    "953222",
+    "953810",
+    "927021",
+    "926173",
+    "953020",
+    "909795",
+    "927153",
+    "953178",
+    "908151",
+    "926177",
+    "898443",
+    "899535",
+    "899893",
+    "953486",
+    "899145",
+    "927333",
+    "970746",
+    "925801",
+    "926495",
+    "955226",
+    "953614",
+    "934393",
+    "922428",
+    "936539",
+    "952846",
+    "940874",
+    "937077",
+    "907903",
+    "935029",
+    "924935",
+    "898371",
+    "911623",
+    "899737",
+    "922782",
+    "925303",
+    "899721",
+    "935841",
+    "926259",
+    "925775",
+    "899855",
+    "935437",
+    "898731",
+    "954130",
+    "945509",
+    "923366",
+    "954186",
+    "926737",
+    "941024",
+    "923336",
+    "954924",
+    "935253",
+    "927837",
+    "899305",
+    "927363",
+    "902789",
+    "910229",
+    "898747",
+    "941228",
+    "971144",
+    "924797",
+    "955160",
+    "937085",
+    "908853",
+    "925901",
+    "923234",
+    "958587",
+    "936803",
+    "907537",
+    "936469",
+    "925509",
+    "908333",
+    "927121",
+    "936729",
+    "935343",
+    "942639",
+    "941040",
+    "940590",
+    "922836",
+    "941154",
+    "926109",
+    "907861",
+    "926431",
+    "959566",
+    "936973",
+    "902499",
+    "927589",
+    "945359",
+    "909625",
+    "942989",
+    "953624",
+    "902597",
+    "925605",
+    "909295",
+    "908109",
+    "908297",
+    "908029",
+    "928265",
+    "935001",
+    "911485",
+    "924465",
+    "903129",
+    "935735",
+    "934411",
+    "908861",
+    "898311",
+    "970962",
+    "923174",
+    "954676",
+    "907673",
+    "926843",
+    "911235",
+    "911179",
+    "954704",
+    "925415",
+    "959596",
+    "909397",
+    "936021",
+    "907881",
+    "908307",
+    "940442",
+    "926685",
+    "926193",
+    "959504",
+    "954968",
+    "953646",
+    "910369",
+    "925981",
+    "971204",
+    "971200",
+    "945645",
+    "945599",
+    "923482",
+    "910471",
+    "897970",
+    "934975",
+    "902745",
+    "927115",
+    "923254",
+    "953586",
+    "936051",
+    "927979",
+    "940642",
+    "926285",
+    "959372",
+    "907661",
+    "954832",
+    "898160",
+    "899819",
+    "927297",
+    "909543",
+    "898893",
+    "926555",
+    "953410",
+    "925861",
+    "970936",
+    "902399",
+    "935473",
+    "934909",
+    "959174",
+    "907711",
+    "927523",
+    "910355",
+    "898645",
+    "924879",
+    "954404",
+    "943572",
+    "935205",
+    "971224",
+    "970828",
+    "898014",
+    "952766",
+    "959602",
+    "941088",
+    "928043",
+    "959716",
+    "940542",
+    "924547",
+    "942955",
+    "925479",
+    "899089",
+    "923804",
+    "902657",
+    "908815",
+    "941108",
+    "940714",
+    "936673",
+    "942913",
+    "902571",
+    "953514",
+    "909285",
+    "928105",
+    "925575",
+    "934561",
+    "909775",
+    "899565",
+    "927619",
+    "925957",
+    "953630",
+    "928165",
+    "926563",
+    "907703",
+    "922838",
+    "935137",
+    "942763",
+    "903361",
+    "927661",
+    "911189",
+    "935389",
+    "959512",
+    "898483",
+    "928099",
+    "909095",
+    "908857",
+    "970776",
+    "923118",
+    "908057",
+    "902525",
+    "940988",
+    "941160",
+    "925391",
+    "927491",
+    "927473",
+    "927631",
+    "898959",
+    "971284",
+    "940696",
+    "934881",
+    "907937",
+    "922818",
+    "942888",
+    "936625",
+    "924207",
+    "940866",
+    "927347",
+    "934715",
+    "941118",
+    "934831",
+    "953116",
+    "954214",
+    "935923",
+    "959544",
+    "945685",
+    "953114",
+    "959428",
+    "954550",
+    "910573",
+    "927789",
+    "907909",
+    "910775",
+    "899031",
+    "909529",
+    "953746",
+    "926471",
+    "954582",
+    "923464",
+    "926645",
+    "923640",
+    "909211",
+    "927917",
+    "908077",
+    "899365",
+    "927615",
+    "899259",
+    "954422",
+    "925517",
+    "909901",
+    "954322",
+    "936079",
+    "923012",
+    "958274",
+    "970902",
+    "940568",
+    "923396",
+    "935443",
+    "907545",
+    "953656",
+    "926299",
+    "899883",
+    "936133",
+    "911573",
+    "911579",
+    "954620",
+    "926955",
+    "924224",
+    "941182",
+    "923710",
+    "927415",
+    "971292",
+    "936871",
+    "934917",
+    "909161",
+    "953932",
+    "923742",
+    "908987",
+    "935015",
+    "925847",
+    "958595",
+    "955336",
+    "925349",
+    "910033",
+    "908403",
+    "927851",
+    "926073",
+    "923606",
+    "899291",
+    "934513",
+    "925339",
+    "936087",
+    "926849",
+    "898881",
+    "970716",
+    "927395",
+    "935901",
+    "923696",
+    "908337",
+    "936357",
+    "934757",
+    "953822",
+    "934823",
+    "924575",
+    "926739",
+    "924887",
+    "902917",
+    "925319",
+    "954778",
+    "936657",
+    "935981",
+    "898911",
+    "898070",
+    "926731",
+    "924243",
+    "923200",
+    "954132",
+    "909831",
+    "934226",
+    "908977",
+    "959170",
+    "954538",
+    "955216",
+    "924979",
+    "940674",
+    "923652",
+    "908819",
+    "953818",
+    "925113",
+    "909953",
+    "954746",
+    "953348",
+    "941378",
+    "926941",
+    "925719",
+    "923678",
+    "898899",
+    "899405",
+    "936877",
+    "908273",
+    "935549",
+    "909347",
+    "899567",
+    "953738",
+    "954522",
+    "899109",
+    "967302",
+    "970736",
+    "927721",
+    "954074",
+    "923524",
+    "925845",
+    "911323",
+    "954068",
+    "908527",
+    "908519",
+    "925033",
+    "899043",
+    "926229",
+    "925995",
+    "934625",
+    "959438",
+    "943433",
+    "926117",
+    "955052",
+    "953968",
+    "953552",
+    "898733",
+    "953944",
+    "953030",
+    "971078",
+    "925965",
+    "936135",
+    "923608",
+    "954900",
+    "953014",
+    "911373",
+    "936517",
+    "898773",
+    "958187",
+    "945591",
+    "923450",
+    "928285",
+    "941042",
+    "953242",
+    "926675",
+    "925313",
+    "935091",
+    "903147",
+    "927315",
+    "958238",
+    "959294",
+    "902671",
+    "935457",
+    "909477",
+    "927879",
+    "923246",
+    "899215",
+    "899099",
+    "953576",
+    "959104",
+    "926721",
+    "954494",
+    "918069",
+    "909671",
+    "898180",
+    "935783",
+    "953018",
+    "927595",
+    "927623",
+    "970908",
+    "897743",
+    "923518",
+    "909355",
+    "959042",
+    "967349",
+    "955596",
+    "954338",
+    "935663",
+    "953250",
+    "945537",
+    "940964",
+    "953450",
+    "909089",
+    "907681",
+    "958314",
+    "924843",
+    "924535",
+    "909173",
+    "898705",
+    "925677",
+    "910864",
+    "898182",
+    "908777",
+    "925615",
+    "936261",
+    "959530",
+    "959414",
+    "927175",
+    "924264",
+    "898062",
+    "955298",
+    "923658",
+    "911609",
+    "936801",
+    "908093",
+    "941272",
+    "936165",
+    "952970",
+    "955198",
+    "903646",
+    "924665",
+    "954506",
+    "902505",
+    "940251",
+    "926755",
+    "902411",
+    "940894",
+    "924499",
+    "942727",
+    "922976",
+    "926155",
+    "899341",
+    "940644",
+    "954460",
+    "953536",
+    "902757",
+    "907611",
+    "922770",
+    "922562",
+    "927597",
+    "909465",
+    "943399",
+    "953970",
+    "898791",
+    "936113",
+    "923736",
+    "908691",
+    "970952",
+    "927687",
+    "924823",
+    "922822",
+    "922544",
+    "941020",
+    "943063",
+    "935679",
+    "934739",
+    "911607",
+    "898811",
+    "909761",
+    "953330",
+    "897775",
+    "936525",
+    "955086",
+    "922768",
+    "934677",
+    "907863",
+    "923060",
+    "898433",
+    "898901",
+    "940692",
+    "936491",
+    "945641",
+    "910555",
+    "899273",
+    "934603",
+    "922936",
+    "934883",
+    "925525",
+    "910281",
+    "954544",
+    "907787",
+    "903349",
+    "923192",
+    "934713",
+    "923370",
+    "908115",
+    "918123",
+    "925493",
+    "958923",
+    "922612",
+    "908961",
+    "899525",
+    "898931",
+    "924983",
+    "924787",
+    "955096",
+    "935463",
+    "926171",
+    "910431",
+    "909439",
+    "936431",
+    "925305",
+    "925161",
+    "940364",
+    "925947",
+    "936331",
+    "907971",
+    "911529",
+    "935141",
+    "908121",
+    "954292",
+    "924371",
+    "936111",
+    "945655",
+    "927533",
+    "925413",
+    "898419",
+    "958591",
+    "927067",
+    "941186",
+    "953308",
+    "899749",
+    "923746",
+    "954902",
+    "925651",
+    "959612",
+    "910089",
+    "935903",
+    "899869",
+    "942771",
+    "970752",
+    "934911",
+    "923618",
+    "934981",
+    "934355",
+    "922652",
+    "902623",
+    "903465",
+    "903405",
+    "898479",
+    "925185",
+    "908501",
+    "908953",
+    "922714",
+    "925567",
+    "934539",
+    "925639",
+    "955156",
+    "936507",
+    "952892",
+    "945124",
+    "910701",
+    "910437",
+    "926847",
+    "935453",
+    "925291",
+    "910577",
+    "927963",
+    "940510",
+    "908933",
+    "926369",
+    "922476",
+    "925717",
+    "910259",
+    "940406",
+    "922750",
+    "945773",
+    "903139",
+    "927431",
+    "908715",
+    "954816",
+    "924553",
+    "935837",
+    "926969",
+    "923638",
+    "911407",
+    "936687",
+    "926261",
+    "953708",
+    "926103",
+    "908783",
+    "922482",
+    "953506",
+    "903497",
+    "899345",
+    "925915",
+    "954928",
+    "925263",
+    "924205",
+    "909071",
+    "927805",
+    "910663",
+    "899411",
+    "936449",
+    "926581",
+    "902907",
+    "898839",
+    "959244",
+    "926707",
+    "926479",
+    "910205",
+    "935501",
+    "925357",
+    "954356",
+    "935361",
+    "925119",
+    "925317",
+    "941044",
+    "941384",
+    "925425",
+    "924541",
+    "899799",
+    "924807",
+    "898409",
+    "909193",
+    "899117",
+    "907927",
+    "945567",
+    "924895",
+    "934735",
+    "927399",
+    "899105",
+    "897767",
+    "955018",
+    "899519",
+    "897803",
+    "945541",
+    "936975",
+    "910529",
+    "959224",
+    "928241",
+    "910383",
+    "908439",
+    "898038",
+    "925293",
+    "897839",
+    "925685",
+    "907621",
+    "959542",
+    "940538",
+    "953392",
+    "902555",
+    "935165",
+    "935071",
+    "958597",
+    "926157",
+    "940253",
+    "910091",
+    "945219",
+    "925797",
+    "945647",
+    "927137",
+    "928125",
+    "953476",
+    "940680",
+    "935193",
+    "953960",
+    "936967",
+    "909609",
+    "935185",
+    "970984",
+    "907759",
+    "909425",
+    "958932",
+    "902801",
+    "959284",
+    "925483",
+    "959230",
+    "935603",
+    "934375",
+    "935559",
+    "945595",
+    "903009",
+    "936565",
+    "971372",
+    "955082",
+    "899851",
+    "908605",
+    "903533",
+    "899641",
+    "908249",
+    "924909",
+    "910579",
+    "936903",
+    "907965",
+    "927499",
+    "959490",
+    "936851",
+    "927403",
+    "922516",
+    "926453",
+    "902673",
+    "911365",
+    "907679",
+    "971106",
+    "926861",
+    "942627",
+    "925879",
+    "927949",
+    "910739",
+    "923160",
+    "899019",
+    "935717",
+    "934841",
+    "925961",
+    "907719",
+    "911435",
+    "902817",
+    "954040",
+    "936785",
+    "952890",
+    "923122",
+    "953902",
+    "899905",
+    "909987",
+    "909933",
+    "924381",
+    "954628",
+    "903057",
+    "922912",
+    "945211",
+    "909393",
+    "908407",
+    "940962",
+    "927755",
+    "935961",
+    "911473",
+    "959306",
+    "940223",
+    "925809",
+    "902895",
+    "954436",
+    "925001",
+    "908131",
+    "940898",
+    "954632",
+    "924721",
+    "953766",
+    "959576",
+    "954842",
+    "953754",
+    "959278",
+    "940402",
+    "908019",
+    "908247",
+    "959020",
+    "925275",
+    "899663",
+    "927909",
+    "910407",
+    "943011",
+    "934727",
+    "909175",
+    "927899",
+    "926639",
+    "952920",
+    "925571",
+    "922834",
+    "927747",
+    "923666",
+    "922902",
+    "898751",
+    "922764",
+    "923356",
+    "970698",
+    "935533",
+    "955184",
+    "907925",
+    "970668",
+    "945407",
+    "923770",
+    "935821",
+    "925237",
+    "940828",
+    "925535",
+    "940422",
+    "927781",
+    "936367",
+    "925699",
+    "909145",
+    "909059",
+    "926005",
+    "898765",
+    "926381",
+    "908927",
+    "927215",
+    "899197",
+    "899803",
+    "959074",
+    "923008",
+    "924296",
+    "935861",
+    "926973",
+    "907961",
+    "908153",
+    "899531",
+    "926655",
+    "922708",
+    "925653",
+    "958316",
+    "924945",
+    "936077",
+    "935999",
+    "954742",
+    "936437",
+    "936263",
+    "923380",
+    "899677",
+    "936497",
+    "936989",
+    "909565",
+    "924613",
+    "934691",
+    "926023",
+    "910375",
+    "941062",
+    "954126",
+    "926979",
+    "952926",
+    "927459",
+    "925389",
+    "940410",
+    "959058",
+    "898787",
+    "907571",
+    "935773",
+    "959330",
+    "908841",
+    "923420",
+    "953188",
+    "953988",
+    "899049",
+    "953962",
+    "952874",
+    "902841",
+    "911249",
+    "935573",
+    "926221",
+    "954922",
+    "926567",
+    "934999",
+    "928045",
+    "936209",
+    "940794",
+    "910697",
+    "959550",
+    "954056",
+    "902783",
+    "910335",
+    "958691",
+    "940612",
+    "923390",
+    "909473",
+    "953362",
+    "953780",
+    "928183",
+    "908185",
+    "909093",
+    "899703",
+    "898339",
+    "970806",
+    "910207",
+    "936697",
+    "925713",
+    "970910",
+    "910319",
+    "943397",
+    "942890",
+    "927351",
+    "953610",
+    "923628",
+    "908081",
+    "936423",
+    "902449",
+    "927365",
+    "923092",
+    "902643",
+    "907973",
+    "943413",
+    "924573",
+    "899583",
+    "954626",
+    "923816",
+    "910761",
+    "908597",
+    "903035",
+    "923162",
+    "910389",
+    "943051",
+    "924413",
+    "922720",
+    "936961",
+    "927419",
+    "909403",
+    "959036",
+    "925543",
+    "909661",
+    "908327",
+    "945487",
+    "927203",
+    "898743",
+    "910341",
+    "923448",
+    "899087",
+    "898837",
+    "923164",
+    "899603",
+    "952990",
+    "934963",
+    "927483",
+    "936487",
+    "934491",
+    "908087",
+    "925015",
+    "923478",
+    "936651",
+    "934711",
+    "954252",
+    "935355",
+    "935645",
+    "953322",
+    "941290",
+    "923088",
+    "936849",
+    "909801",
+    "954604",
+    "924921",
+    "926335",
+    "923720",
+    "904123",
+    "934216",
+    "923568",
+    "908787",
+    "925091",
+    "959686",
+    "923346",
+    "953062",
+    "934951",
+    "928321",
+    "940942",
+    "923682",
+    "922656",
+    "935915",
+    "910119",
+    "953744",
+    "908415",
+    "907883",
+    "925595",
+    "911229",
+    "910347",
+    "926475",
+    "941080",
+    "927671",
+    "970958",
+    "935059",
+    "898883",
+    "953578",
+    "907797",
+    "953414",
+    "928269",
+    "926521",
+    "935413",
+    "927751",
+    "924789",
+    "909719",
+    "908843",
+    "959564",
+    "935801",
+    "953786",
+    "923498",
+    "903481",
+    "902707",
+    "899815",
+    "940532",
+    "942933",
+    "899597",
+    "922718",
+    "910429",
+    "953770",
+    "940344",
+    "959132",
+    "898150",
+    "934643",
+    "934291",
+    "923182",
+    "909495",
+    "941362",
+    "959164",
+    "923038",
+    "897783",
+    "899707",
+    "908875",
+    "923694",
+    "907773",
+    "902701",
+    "902691",
+    "928143",
+    "899011",
+    "925795",
+    "909781",
+    "902821",
+    "953946",
+    "899473",
+    "940952",
+    "953830",
+    "940378",
+    "911339",
+    "925889",
+    "953206",
+    "942931",
+    "924811",
+    "958264",
+    "925985",
+    "909277",
+    "935545",
+    "927883",
+    "935499",
+    "958998",
+    "934843",
+    "925659",
+    "936555",
+    "943403",
+    "902741",
+    "953950",
+    "943595",
+    "898018",
+    "926569",
+    "935511",
+    "902859",
+    "928109",
+    "935179",
+    "922570",
+    "899633",
+    "910313",
+    "899157",
+    "945605",
+    "908445",
+    "952922",
+    "925907",
+    "898963",
+    "935521",
+    "934977",
+    "910583",
+    "926343",
+    "907895",
+    "924937",
+    "954306",
+    "935435",
+    "927381",
+    "926137",
+    "924589",
+    "940438",
+    "923722",
+    "907687",
+    "934301",
+    "927877",
+    "959368",
+    "910629",
+    "908483",
+    "935217",
+    "924633",
+    "971198",
+    "941158",
+    "959018",
+    "935527",
+    "954970",
+    "934443",
+    "954826",
+    "934220",
+    "943343",
+    "934162",
+    "925481",
+    "908157",
+    "926135",
+    "909357",
+    "899493",
+    "911543",
+    "924973",
+    "899585",
+    "908301",
+    "908885",
+    "927321",
+    "907829",
+    "925083",
+    "908941",
+    "923432",
+    "940500",
+    "953860",
+    "945745",
+    "925269",
+    "924731",
+    "952854",
+    "945361",
+    "953718",
+    "927653",
+    "936415",
+    "936335",
+    "898919",
+    "959518",
+    "954638",
+    "935449",
+    "910501",
+    "908063",
+    "954708",
+    "923706",
+    "970708",
+    "935879",
+    "927233",
+    "908363",
+    "936215",
+    "923532",
+    "923726",
+    "902395",
+    "924527",
+    "923236",
+    "958575",
+    "936755",
+    "898991",
+    "910465",
+    "925165",
+    "923210",
+    "911295",
+    "937119",
+    "908769",
+    "897871",
+    "925787",
+    "925757",
+    "918042",
+    "941064",
+    "908189",
+    "935825",
+    "923430",
+    "954106",
+    "954478",
+    "945411",
+    "945781",
+    "935327",
+    "908659",
+    "940860",
+    "935229",
+    "909039",
+    "934439",
+    "934467",
+    "923476",
+    "945415",
+    "941048",
+    "923196",
+    "940870",
+    "940368",
+    "927129",
+    "898943",
+    "925521",
+    "926359",
+    "959514",
+    "971352",
+    "955134",
+    "899481",
+    "898447",
+    "954870",
+    "922530",
+    "898581",
+    "911317",
+    "940716",
+    "936443",
+    "936141",
+    "924965",
+    "909105",
+    "898417",
+    "959238",
+    "910285",
+    "936183",
+    "953350",
+    "926891",
+    "902785",
+    "926085",
+    "899879",
+    "970970",
+    "907831",
+    "898801",
+    "941136",
+    "935045",
+    "907693",
+    "927353",
+    "945225",
+    "899263",
+    "940424",
+    "934637",
+    "958288",
+    "937123",
+    "934859",
+    "908611",
+    "953728",
+    "910159",
+    "958593",
+    "934279",
+    "959692",
+    "897771",
+    "925065",
+    "945727",
+    "934311",
+    "909143",
+    "954232",
+    "925301",
+    "934151",
+    "955521",
+    "955548",
+    "945489",
+    "934741",
+    "940488",
+    "925655",
+    "937031",
+    "927613",
+    "908825",
+    "898613",
+    "953456",
+    "940630",
+    "942925",
+    "936779",
+    "904297",
+    "902387",
+    "899625",
+    "942667",
+    "899191",
+    "924653",
+    "899747",
+    "898381",
+    "902633",
+    "959658",
+    "959356",
+    "954294",
+    "942909",
+    "908295",
+    "943437",
+    "928251",
+    "922762",
+    "922552",
+    "936665",
+    "923352",
+    "940326",
+    "898266",
+    "926751",
+    "940688",
+    "954226",
+    "925929",
+    "922790",
+    "925949",
+    "911483",
+    "934269",
+    "936879",
+    "934297",
+    "926091",
+    "908661",
+    "908271",
+    "898214",
+    "925073",
+    "910327",
+    "908801",
+    "908719",
+    "898407",
+    "927699",
+    "910025",
+    "955154",
+    "925891",
+    "909141",
+    "940558",
+    "918152",
+    "909379",
+    "908299",
+    "953992",
+    "925093",
+    "924903",
+    "953862",
+    "940628",
+    "926535",
+    "910621",
+    "899013",
+    "926037",
+    "923580",
+    "908239",
+    "954328",
+    "902893",
+    "926409",
+    "923458",
+    "953720",
+    "923502",
+    "899275",
+    "952814",
+    "935153",
+    "926083",
+    "954524",
+    "953722",
+    "910139",
+    "903746",
+    "922888",
+    "954182",
+    "958320",
+    "953684",
+    "909983",
+    "958631",
+    "923716",
+    "945292",
+    "910417",
+    "942591",
+    "926529",
+    "908945",
+    "900799",
+    "971394",
+    "927357",
+    "971360",
+    "898957",
+    "911449",
+    "953154",
+    "902825",
+    "899321",
+    "971022",
+    "934703",
+    "898178",
+    "926595",
+    "943630",
+    "924457",
+    "907915",
+    "955224",
+    "925931",
+    "925127",
+    "908513",
+    "898579",
+    "953060",
+    "927173",
+    "925785",
+    "910295",
+    "927285",
+    "908423",
+    "943041",
+    "943617",
+    "926341",
+    "902483",
+    "928141",
+    "910717",
+    "924763",
+    "936919",
+    "910587",
+    "958197",
+    "953528",
+    "899451",
+    "935805",
+    "970802",
+    "897795",
+    "928261",
+    "928211",
+    "898276",
+    "971010",
+    "940736",
+    "925711",
+    "924519",
+    "940404",
+    "898925",
+    "926169",
+    "926965",
+    "945316",
+    "902403",
+    "926389",
+    "935003",
+    "953532",
+    "925491",
+    "959400",
+    "936225",
+    "927103",
+    "935157",
+    "936567",
+    "953010",
+    "911175",
+    "910499",
+    "908037",
+    "936499",
+    "953540",
+    "945485",
+    "940934",
+    "936515",
+    "936465",
+    "954688",
+    "925501",
+    "897819",
+    "922616",
+    "902929",
+    "954646",
+    "909697",
+    "970826",
+    "902609",
+    "941334",
+    "926705",
+    "927355",
+    "909639",
+    "924755",
+    "907627",
+    "911363",
+    "970996",
+    "941470",
+    "959076",
+    "954212",
+    "924587",
+    "924917",
+    "907567",
+    "928005",
+    "971334",
+    "954002",
+    "935737",
+    "925423",
+    "910171",
+    "953054",
+    "936131",
+    "937053",
+    "925835",
+    "953852",
+    "908013",
+    "934769",
+    "953024",
+    "908215",
+    "924769",
+    "927187",
+    "936319",
+    "909487",
+    "902715",
+    "935319",
+    "926151",
+    "922942",
+    "898327",
+    "954280",
+    "934833",
+    "907911",
+    "927689",
+    "953140",
+    "927517",
+    "926709",
+    "926061",
+    "970982",
+    "958294",
+    "923598",
+    "926247",
+    "925261",
+    "910711",
+    "940808",
+    "910707",
+    "971008",
+    "934863",
+    "924247",
+    "898531",
+    "909715",
+    "936633",
+    "908877",
+    "954392",
+    "902355",
+    "927629",
+    "923276",
+    "936199",
+    "924735",
+    "943551",
+    "923304",
+    "940640",
+    "910225",
+    "954932",
+    "940560",
+    "924509",
+    "922992",
+    "925201",
+    "958330",
+    "925117",
+    "926507",
+    "902729",
+    "959366",
+    "926873",
+    "928185",
+    "907659",
+    "898663",
+    "954986",
+    "935377",
+    "925035",
+    "959050",
+    "909673",
+    "899351",
+    "953686",
+    "943479",
+    "955066",
+    "908335",
+    "936421",
+    "910269",
+    "924473",
+    "909847",
+    "899639",
+    "927901",
+    "928067",
+    "955166",
+    "911213",
+    "898507",
+    "936337",
+    "970724",
+    "934581",
+    "908265",
+    "909455",
+    "926741",
+    "958292",
+    "922596",
+    "910395",
+    "908503",
+    "922554",
+    "925683",
+    "959282",
+    "958675",
+    "922840",
+    "898565",
+    "909113",
+    "908807",
+    "945511",
+    "923632",
+    "970744",
+    "908601",
+    "959066",
+    "908195",
+    "909613",
+    "953314",
+    "958683",
+    "926559",
+    "936285",
+    "908737",
+    "909885",
+    "954700",
+    "936097",
+    "909229",
+    "897986",
+    "910377",
+    "925077",
+    "940516",
+    "924821",
+    "953246",
+    "925679",
+    "909861",
+    "940840",
+    "898487",
+    "945801",
+    "936577",
+    "946571",
+    "958254",
+    "941132",
+    "926609",
+    "923404",
+    "907891",
+    "936123",
+    "925197",
+    "925735",
+    "925139",
+    "943258",
+    "970754",
+    "958342",
+    "927975",
+    "926677",
+    "902445",
+    "923126",
+    "910277",
+    "928095",
+    "926543",
+    "942711",
+    "924681",
+    "945563",
+    "908603",
+    "936369",
+    "927875",
+    "959516",
+    "910569",
+    "898653",
+    "925587",
+    "923704",
+    "935877",
+    "909729",
+    "959128",
+    "922510",
+    "955358",
+    "908641",
+    "934321",
+    "952988",
+    "935855",
+    "907737",
+    "936607",
+    "934413",
+    "971368",
+    "927165",
+    "903071",
+    "898967",
+    "897879",
+    "926883",
+    "902481",
+    "927503",
+    "925803",
+    "925637",
+    "923700",
+    "902469",
+    "935719",
+    "934789",
+    "908469",
+    "945771",
+    "909817",
+    "924933",
+    "936661",
+    "926793",
+    "926433",
+    "908723",
+    "903141",
+    "927757",
+    "952918",
+    "936769",
+    "925471",
+    "926463",
+    "924515",
+    "934927",
+    "953334",
+    "908293",
+    "922728",
+    "959038",
+    "953530",
+    "899555",
+    "908921",
+    "923762",
+    "909207",
+    "934475",
+    "935619",
+    "934509",
+    "953344",
+    "899055",
+    "924213",
+    "922710",
+    "924897",
+    "945585",
+    "898985",
+    "959256",
+    "955202",
+    "909569",
+    "954854",
+    "923262",
+    "899743",
+    "923214",
+    "898805",
+    "954344",
+    "935769",
+    "910111",
+    "954240",
+    "953824",
+    "923184",
+    "907727",
+    "953666",
+    "927037",
+    "923672",
+    "902927",
+    "909137",
+    "959192",
+    "927763",
+    "927485",
+    "955306",
+    "940366",
+    "910759",
+    "936827",
+    "924435",
+    "899181",
+    "942587",
+    "926659",
+    "924869",
+    "908535",
+    "926187",
+    "922802",
+    "959190",
+    "958545",
+    "940900",
+    "924611",
+    "925459",
+    "971272",
+    "925497",
+    "902465",
+    "945519",
+    "934565",
+    "908007",
+    "959210",
+    "971346",
+    "902655",
+    "940452",
+    "899307",
+    "935341",
+    "909687",
+    "971060",
+    "954022",
+    "925549",
+    "909339",
+    "953352",
+    "952836",
+    "911259",
+    "953608",
+    "925167",
+    "934527",
+    "911497",
+    "953474",
+    "954366",
+    "954206",
+    "909599",
+    "924387",
+    "902495",
+    "923284",
+    "935943",
+    "922944",
+    "955150",
+    "923422",
+    "925289",
+    "924211",
+    "925299",
+    "911223",
+    "955318",
+    "908549",
+    "925611",
+    "954368",
+    "925045",
+    "970730",
+    "954304",
+    "940602",
+    "898200",
+    "959572",
+    "936365",
+    "926769",
+    "922980",
+    "923854",
+    "898599",
+    "927693",
+    "953626",
+    "927201",
+    "927275",
+    "927155",
+    "909411",
+    "923472",
+    "926325",
+    "935797",
+    "922694",
+    "909927",
+    "928245",
+    "954712",
+    "935027",
+    "925855",
+    "945839",
+    "898783",
+    "909443",
+    "902843",
+    "899029",
+    "959422",
+    "927223",
+    "959696",
+    "924913",
+    "936283",
+    "955563",
+    "902561",
+    "959526",
+    "910003",
+    "927607",
+    "925979",
+    "923488",
+    "926009",
+    "935991",
+    "934895",
+    "925115",
+    "909875",
+    "924471",
+    "945435",
+    "927225",
+    "926819",
+    "923248",
+    "925945",
+    "909079",
+    "928121",
+    "923266",
+    "927101",
+    "908441",
+    "954618",
+    "910257",
+    "971328",
+    "955352",
+    "953668",
+    "926025",
+    "898989",
+    "935191",
+    "926571",
+    "945799",
+    "926985",
+    "925325",
+    "924863",
+    "952972",
+    "971156",
+    "954528",
+    "936709",
+    "928283",
+    "952998",
+    "899589",
+    "899095",
+    "910015",
+    "927643",
+    "908255",
+    "909063",
+    "922648",
+    "923310",
+    "911525",
+    "909127",
+    "954760",
+    "935119",
+    "926753",
+    "924567",
+    "924835",
+    "909447",
+    "945159",
+    "898144",
+    "902533",
+    "934659",
+    "927095",
+    "909675",
+    "908049",
+    "940346",
+    "922682",
+    "953198",
+    "954038",
+    "953696",
+    "907749",
+    "959254",
+    "934787",
+    "935139",
+    "926831",
+    "959492",
+    "954118",
+    "936839",
+    "911197",
+    "970664",
+    "958685",
+    "953386",
+    "937011",
+    "940980",
+    "953566",
+    "943401",
+    "935779",
+    "935781",
+    "959684",
+    "970632",
+    "935589",
+    "927895",
+    "971412",
+    "908243",
+    "958230",
+    "928119",
+    "927495",
+    "922598",
+    "927921",
+    "927967",
+    "935333",
+    "923028",
+    "925341",
+    "942671",
+    "935285",
+    "926439",
+    "902507",
+    "925265",
+    "959714",
+    "925583",
+    "970720",
+    "953628",
+    "909551",
+    "925623",
+    "952938",
+    "925703",
+    "911649",
+    "971016",
+    "936167",
+    "910419",
+    "937087",
+    "943455",
+    "935483",
+    "909973",
+    "955206",
+    "935199",
+    "934693",
+    "909779",
+    "925721",
+    "924507",
+    "910149",
+    "910057",
+    "955234",
+    "925307",
+    "954474",
+    "923178",
+    "955130",
+    "934373",
+    "940890",
+    "902851",
+    "955104",
+    "899303",
+    "936203",
+    "953680",
+    "945431",
+    "924581",
+    "923768",
+    "907739",
+    "945258",
+    "909435",
+    "940752",
+    "945551",
+    "924657",
+    "909159",
+    "898228",
+    "952958",
+    "925063",
+    "902959",
+    "922432",
+    "935207",
+    "899897",
+    "925999",
+    "935893",
+    "927733",
+    "910315",
+    "952956",
+    "942719",
+    "927617",
+    "970792",
+    "922488",
+    "899695",
+    "924373",
+    "909571",
+    "903469",
+    "898240",
+    "928357",
+    "923000",
+    "924365",
+    "971216",
+    "925953",
+    "923190",
+    "936435",
+    "959510",
+    "954342",
+    "924411",
+    "923410",
+    "936783",
+    "940266",
+    "953226",
+    "898757",
+    "971090",
+    "909947",
+    "907777",
+    "936187",
+    "911393",
+    "910039",
+    "923114",
+    "935537",
+    "955609",
+    "936739",
+    "910779",
+    "937043",
+    "943469",
+    "909749",
+    "922810",
+    "959272",
+    "909005",
+    "922908",
+    "909359",
+    "903125",
+    "971176",
+    "910381",
+    "909615",
+    "903007",
+    "935159",
+    "899027",
+    "934689",
+    "927423",
+    "924827",
+    "924429",
+    "936293",
+    "922560",
+    "923586",
+    "923288",
+    "953878",
+    "909035",
+    "898975",
+    "954330",
+    "910565",
+    "899569",
+    "936513",
+    "924989",
+    "971208",
+    "899449",
+    "954168",
+    "923780",
+    "922546",
+    "959408",
+    "935411",
+    "925967",
+    "954576",
+    "923362",
+    "924741",
+    "902377",
+    "940818",
+    "925017",
+    "959522",
+    "910241",
+    "898222",
+    "909269",
+    "898174",
+    "954926",
+    "945290",
+    "927829",
+    "908805",
+    "946604",
+    "954864",
+    "898090",
+    "958334",
+    "910599",
+    "945555",
+    "899375",
+    "959444",
+    "959380",
+    "923680",
+    "925819",
+    "970838",
+    "954910",
+    "909171",
+    "954562",
+    "927729",
+    "952858",
+    "908429",
+    "927715",
+    "909827",
+    "925059",
+    "941268",
+    "923864",
+    "923786",
+    "923480",
+    "910439",
+    "923792",
+    "935351",
+    "903123",
+    "899887",
+    "927397",
+    "937009",
+    "934923",
+    "971342",
+    "941008",
+    "935441",
+    "910153",
+    "923294",
+    "940650",
+    "943007",
+    "899007",
+    "955296",
+    "954312",
+    "936757",
+    "925541",
+    "922684",
+    "902357",
+    "959434",
+    "935363",
+    "926867",
+    "898357",
+    "924256",
+    "923328",
+    "927299",
+    "937093",
+    "935339",
+    "923602",
+    "970722",
+    "934903",
+    "923724",
+    "911355",
+    "945797",
+    "970974",
+    "908689",
+    "924925",
+    "943417",
+    "923684",
+    "926039",
+    "924565",
+    "911267",
+    "908287",
+    "899499",
+    "899873",
+    "926243",
+    "899577",
+    "937019",
+    "953730",
+    "945615",
+    "902779",
+    "954578",
+    "907607",
+    "926347",
+    "954998",
+    "899469",
+    "954108",
+    "927863",
+    "940295",
+    "926833",
+    "935741",
+    "927071",
+    "953948",
+    "924619",
+    "908127",
+    "936705",
+    "909555",
+    "959072",
+    "952904",
+    "934745",
+    "928053",
+    "927603",
+    "898895",
+    "898573",
+    "899327",
+    "952964",
+    "940884",
+    "899645",
+    "927561",
+    "898122",
+    "935661",
+    "936301",
+    "898134",
+    "908963",
+    "898977",
+    "971168",
+    "941208",
+    "899383",
+    "936581",
+    "909647",
+    "940756",
+    "935283",
+    "926777",
+    "959046",
+    "923156",
+    "959364",
+    "927065",
+    "925047",
+    "936417",
+    "926067",
+    "907957",
+    "945262",
+    "940856",
+    "908859",
+    "927343",
+    "923112",
+    "935909",
+    "924899",
+    "909581",
+    "910459",
+    "907671",
+    "902653",
+    "924603",
+    "899559",
+    "907675",
+    "934671",
+    "925241",
+    "952804",
+    "902425",
+    "940588",
+    "925101",
+    "936303",
+    "899659",
+    "923844",
+    "942847",
+    "971116",
+    "908219",
+    "926887",
+    "899377",
+    "907667",
+    "898365",
+    "935935",
+    "935265",
+    "898423",
+    "922634",
+    "926799",
+    "898799",
+    "908085",
+    "940832",
+    "934337",
+    "910423",
+    "941072",
+    "936291",
+    "923090",
+    "925199",
+    "898735",
+    "927119",
+    "926451",
+    "922820",
+    "899785",
+    "959536",
+    "898769",
+    "935169",
+    "909485",
+    "909815",
+    "899573",
+    "953384",
+    "935673",
+    "934403",
+    "899207",
+    "955170",
+    "925407",
+    "934571",
+    "955188",
+    "940522",
+    "943009",
+    "928065",
+    "935293",
+    "954326",
+    "910051",
+    "940530",
+    "959116",
+    "924393",
+    "971274",
+    "924915",
+    "911243",
+    "952880",
+    "925597",
+    "923772",
+    "924999",
+    "940450",
+    "926051",
+    "922958",
+    "959410",
+    "954412",
+    "927555",
+    "909689",
+    "935771",
+    "925021",
+    "925007",
+    "943065",
+    "926111",
+    "924851",
+    "924423",
+    "971246",
+    "959120",
+    "923050",
+    "940362",
+    "936189",
+    "925661",
+    "903457",
+    "899709",
+    "927205",
+    "926267",
+    "953448",
+    "940566",
+    "934127",
+    "934907",
+    "935297",
+    "935417",
+    "953864",
+    "925693",
+    "924523",
+    "909667",
+    "898082",
+    "935597",
+    "959672",
+    "899155",
+    "911309",
+    "908907",
+    "899667",
+    "941110",
+    "928117",
+    "926963",
+    "923134",
+    "927123",
+    "899301",
+    "924747",
+    "898010",
+    "934899",
+    "952942",
+    "925253",
+    "935475",
+    "909199",
+    "899575",
+    "898383",
+    "898264",
+    "927231",
+    "945609",
+    "922738",
+    "941036",
+    "910675",
+    "934717",
+    "908353",
+    "903109",
+    "910936",
+    "898373",
+    "954026",
+    "925151",
+    "909623",
+    "927813",
+    "926119",
+    "909603",
+    "898909",
+    "924949",
+    "911463",
+    "958641",
+    "945603",
+    "959442",
+    "943481",
+    "907843",
+    "954380",
+    "926313",
+    "899409",
+    "945579",
+    "910393",
+    "971286",
+    "910773",
+    "970704",
+    "955228",
+    "953138",
+    "923810",
+    "923326",
+    "958268",
+    "955334",
+    "902429",
+    "970960",
+    "970842",
+    "954314",
+    "934523",
+    "926217",
+    "902463",
+    "925923",
+    "903145",
+    "955574",
+    "935481",
+    "927791",
+    "924957",
+    "897851",
+    "954224",
+    "924425",
+    "910073",
+    "899435",
+    "936951",
+    "922518",
+    "953854",
+    "928291",
+    "971192",
+    "953174",
+    "942603",
+    "936117",
+    "926031",
+    "908225",
+    "959374",
+    "925071",
+    "955300",
+    "943409",
+    "910475",
+    "928253",
+    "937061",
+    "899063",
+    "898078",
+    "959426",
+    "925765",
+    "910019",
+    "934733",
+    "911417",
+    "908821",
+    "924577",
+    "971414",
+    "908687",
+    "925731",
+    "959496",
+    "923054",
+    "902635",
+    "940662",
+    "935941",
+    "953942",
+    "911273",
+    "945270",
+    "909845",
+    "970994",
+    "928113",
+    "959552",
+    "954414",
+    "925345",
+    "954064",
+    "909045",
+    "898389",
+    "954572",
+    "941084",
+]
 export default {
-  name: "PileVisualization",
-  props: {
-    // 可从父组件传入 viewToken；未传入将使用示例 Token
-    viewToken: {
-      type: String,
-      default: "",
-    },
-  },
-  // 组件内状态与交互逻辑全部集中在此文件中，遵循 ES6+ 规范
-  data() {
-    return {
-      // 3D 占位对象（与 demo999.html 一致的方法名使用安全保护）
-      viewer3D: null,
-      app: null,
-      model3D: null,
-      // 若未传入，将在 mounted 中设置演示 Token
-      localViewToken: "",
-      // 按钮文字与开关状态（保持与 demo 行为一致）
-      btnTexts: {
-        id: "本周完成",
-        data: "本月完成",
-        all: "累计完成",
-      },
-      isOverrideComponentsColorByIdActivated: false,
-      isOverrideComponentsColorByDataActivated: false,
-      isOverrideAllComponentsColorActivated: false,
-      // 顶部时间与天气
-      now: { date: "", time: "" },
-      weather: "晴 6℃",
-
-      // 顶部状态标签交互
-      statusTabs: [
-        { key: "finished", label: "开挖完成" },
-        { key: "not-started", label: "未开始" },
-        { key: "not-finished", label: "未完成" },
-      ],
-      activeStatusIndex: 0,
-
-      // 数据总览（与参考样式一致的三个计数块）
-      counters: {
-        total: "2864",
-        completed: "2789",
-        pending: "75",
-      },
-
-      // 搜索交互
-      searchKeyword: "",
-
-      // 左侧面板折叠
-      leftCollapsed: false,
-
-      // 完成率与图例
-      progressPercent: 97.38,
-      legend: { completed: 2789, unfinished: 75 },
-
-      // 指标进度条（示意数据）
-      metrics: [
-        { key: "quality", name: "三标：", done: 1331, total: 1343 },
-        { key: "safety", name: "四标：", done: 1458, total: 1521 },
-        { key: "schedule", name: "五标", done: 249, total: 253 },
-        { key: "coord", name: "六标：", done: 604, total: 631 },
-      ],
-
-      // 左下趋势图占位数据（仅样式演示）
-      chartData: [22, 18, 26, 12, 20, 30, 16, 24, 14, 28],
-      // 工程量统计数据
-      projectData: [
-        {
-          section: "三标",
-          piles: [
-            {
-              type: "0.6m桩长20m (类型1)",
-              count: 500,
-              unit: "根",
-              volume: 2500,
-              unitVolume: "立方米",
-            },
-            {
-              type: "0.6m桩长15m (类型2)",
-              count: 500,
-              unit: "根",
-              volume: 2500,
-              unitVolume: "立方米",
-            },
-          ],
+    name: "PileVisualization",
+    props: {
+        // 可从父组件传入 viewToken；未传入将使用示例 Token
+        viewToken: {
+            type: String,
+            default: "",
         },
-        {
-          section: "四标",
-          piles: [
-            {
-              type: "0.6m桩长20m (类型1)",
-              count: 500,
-              unit: "根",
-              volume: 2500,
-              unitVolume: "立方米",
+    },
+    // 组件内状态与交互逻辑全部集中在此文件中，遵循 ES6+ 规范
+    data() {
+        return {
+            // 3D 占位对象（与 demo999.html 一致的方法名使用安全保护）
+            viewer3D: null,
+            app: null,
+            model3D: null,
+            // 若未传入，将在 mounted 中设置演示 Token
+            localViewToken: "",
+            // 按钮文字与开关状态（保持与 demo 行为一致）
+            btnTexts: {
+                id: "本周完成",
+                data: "本月完成",
+                all: "累计完成",
             },
-            {
-              type: "0.6m桩长15m (类型2)",
-              count: 500,
-              unit: "根",
-              volume: 2500,
-              unitVolume: "立方米",
-            },
-          ],
-        },
-        {
-          section: "五标",
-          piles: [
-            {
-              type: "0.6m桩长20m (类型1)",
-              count: 500,
-              unit: "根",
-              volume: 2500,
-              unitVolume: "立方米",
-            },
-            {
-              type: "0.6m桩长15m (类型2)",
-              count: 500,
-              unit: "根",
-              volume: 2500,
-              unitVolume: "立方米",
-            },
-          ],
-        },
-        {
-          section: "六标",
-          piles: [
-            {
-              type: "0.6m桩长20m (类型1)",
-              count: 500,
-              unit: "根",
-              volume: 2500,
-              unitVolume: "立方米",
-            },
-            {
-              type: "0.6m桩长15m (类型2)",
-              count: 500,
-              unit: "根",
-              volume: 2500,
-              unitVolume: "立方米",
-            },
-          ],
-        },
-      ],
+            isOverrideComponentsColorByIdActivated: false,
+            isOverrideComponentsColorByDataActivated: false,
+            isOverrideAllComponentsColorActivated: false,
+            // 顶部时间与天气
+            now: { date: "", time: "" },
+            weather: "晴 6℃",
 
-      // 过滤器交互
-      typeFilters: [
-        { key: "all", label: "全部" },
-        { key: "drill", label: "钻孔桩" },
-        { key: "prefab", label: "预制桩" },
-      ],
-      zoneFilters: [
-        { key: "all", label: "全部" },
-        { key: "a", label: "A区" },
-        { key: "b", label: "B区" },
-        { key: "c", label: "C区" },
-      ],
-      activeType: "all",
-      activeZone: "all",
-    };
-  },
-  computed: {
-    // CSS 进度环样式计算（精确到两位小数）
-    gaugeStyle() {
-      const pct = Math.max(0, Math.min(100, Number(this.progressPercent)));
-      return {
-        background: `conic-gradient(#00e7ff ${pct * 3.6}deg, #103a6e 0)`,
-      };
+            // 顶部状态标签交互
+            statusTabs: [
+                { key: "finished", label: "开挖完成" },
+                { key: "not-started", label: "未开始" },
+                { key: "not-finished", label: "未完成" },
+            ],
+            activeStatusIndex: 0,
+
+            // 数据总览（与参考样式一致的三个计数块）
+            counters: {
+                total: "2864",
+                completed: "2789",
+                pending: "75",
+            },
+
+            // 搜索交互
+            searchKeyword: "",
+
+            // 左侧面板折叠
+            leftCollapsed: false,
+
+            // 完成率与图例
+            progressPercent: 97.38,
+            legend: { completed: 2789, unfinished: 75 },
+
+            // 指标进度条（示意数据）
+            metrics: [
+                { key: "quality", name: "三标：", done: 1331, total: 1343 },
+                { key: "safety", name: "四标：", done: 1458, total: 1521 },
+                { key: "schedule", name: "五标", done: 249, total: 253 },
+                { key: "coord", name: "六标：", done: 604, total: 631 },
+            ],
+
+            // 左下趋势图占位数据（仅样式演示）
+            chartData: [22, 18, 26, 12, 20, 30, 16, 24, 14, 28],
+            // 工程量统计数据
+            projectData: [
+                {
+                    section: "三标",
+                    piles: [
+                        {
+                            type: "0.6m桩长20m (类型1)",
+                            count: 500,
+                            unit: "根",
+                            volume: 2500,
+                            unitVolume: "立方米",
+                        },
+                        {
+                            type: "0.6m桩长15m (类型2)",
+                            count: 500,
+                            unit: "根",
+                            volume: 2500,
+                            unitVolume: "立方米",
+                        },
+                    ],
+                },
+                {
+                    section: "四标",
+                    piles: [
+                        {
+                            type: "0.6m桩长20m (类型1)",
+                            count: 500,
+                            unit: "根",
+                            volume: 2500,
+                            unitVolume: "立方米",
+                        },
+                        {
+                            type: "0.6m桩长15m (类型2)",
+                            count: 500,
+                            unit: "根",
+                            volume: 2500,
+                            unitVolume: "立方米",
+                        },
+                    ],
+                },
+                {
+                    section: "五标",
+                    piles: [
+                        {
+                            type: "0.6m桩长20m (类型1)",
+                            count: 500,
+                            unit: "根",
+                            volume: 2500,
+                            unitVolume: "立方米",
+                        },
+                        {
+                            type: "0.6m桩长15m (类型2)",
+                            count: 500,
+                            unit: "根",
+                            volume: 2500,
+                            unitVolume: "立方米",
+                        },
+                    ],
+                },
+                {
+                    section: "六标",
+                    piles: [
+                        {
+                            type: "0.6m桩长20m (类型1)",
+                            count: 500,
+                            unit: "根",
+                            volume: 2500,
+                            unitVolume: "立方米",
+                        },
+                        {
+                            type: "0.6m桩长15m (类型2)",
+                            count: 500,
+                            unit: "根",
+                            volume: 2500,
+                            unitVolume: "立方米",
+                        },
+                    ],
+                },
+            ],
+
+            // 过滤器交互
+            typeFilters: [
+                { key: "all", label: "全部" },
+                { key: "drill", label: "钻孔桩" },
+                { key: "prefab", label: "预制桩" },
+            ],
+            zoneFilters: [
+                { key: "all", label: "全部" },
+                { key: "a", label: "A区" },
+                { key: "b", label: "B区" },
+                { key: "c", label: "C区" },
+            ],
+            activeType: "all",
+            activeZone: "all",
+        }
     },
-    totalPiles() {
-      let sum = 0;
-      if (this.projectData) {
-        this.projectData.forEach((s) =>
-          s.piles.forEach((p) => (sum += p.count))
-        );
-      }
-      return sum.toLocaleString();
+    computed: {
+        // CSS 进度环样式计算（精确到两位小数）
+        gaugeStyle() {
+            const pct = Math.max(0, Math.min(100, Number(this.progressPercent)))
+            return {
+                background: `conic-gradient(#00e7ff ${pct * 3.6}deg, #103a6e 0)`,
+            }
+        },
+        totalPiles() {
+            let sum = 0
+            if (this.projectData) {
+                this.projectData.forEach(s => s.piles.forEach(p => (sum += p.count)))
+            }
+            return sum.toLocaleString()
+        },
+        totalVolume() {
+            let sum = 0
+            if (this.projectData) {
+                this.projectData.forEach(s => s.piles.forEach(p => (sum += p.volume)))
+            }
+            return sum.toLocaleString()
+        },
     },
-    totalVolume() {
-      let sum = 0;
-      if (this.projectData) {
-        this.projectData.forEach((s) =>
-          s.piles.forEach((p) => (sum += p.volume))
-        );
-      }
-      return sum.toLocaleString();
+    created() {
+        this.updateClock()
     },
-  },
-  created() {
-    this.updateClock();
-  },
-  mounted() {
-    // 每秒更新时间显示
-    this.clockTimer = setInterval(this.updateClock, 1000);
-    // 初始化 BIMFACE SDK 与场景
-    this.initBimface();
-  },
-  beforeDestroy() {
-    clearInterval(this.clockTimer);
-    window.removeEventListener &&
-      window.removeEventListener("resize", this._onResize);
-    if (this.app && this.app.dispose) {
-      try {
-        this.app.dispose();
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error("场景释放失败", e);
-      }
-    }
-  },
-  methods: {
-    // 更新时间（YYYY-MM-DD 与 HH:mm:ss）
-    updateClock() {
-      const d = new Date();
-      const pad = (n) => String(n).padStart(2, "0");
-      const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-        d.getDate()
-      )}`;
-      const weekMap = [
-        "星期日",
-        "星期一",
-        "星期二",
-        "星期三",
-        "星期四",
-        "星期五",
-        "星期六",
-      ];
-      const time = `${weekMap[d.getDay()]} ${pad(d.getHours())}:${pad(
-        d.getMinutes()
-      )}:${pad(d.getSeconds())}`;
-      this.now = { date, time };
+    mounted() {
+        // 每秒更新时间显示
+        this.clockTimer = setInterval(this.updateClock, 1000)
+        // 初始化 BIMFACE SDK 与场景
+        this.initBimface()
     },
-    refreshClock() {
-      this.updateClock();
+    beforeDestroy() {
+        clearInterval(this.clockTimer)
+        window.removeEventListener && window.removeEventListener("resize", this._onResize)
+        if (this.app && this.app.dispose) {
+            try {
+                this.app.dispose()
+            } catch (e) {
+                // eslint-disable-next-line no-console
+                console.error("场景释放失败", e)
+            }
+        }
     },
-    getSectionStats(section) {
-      let count = 0;
-      let volume = 0;
-      section.piles.forEach((p) => {
-        count += p.count;
-        volume += p.volume;
-      });
-      return {
-        count: count.toLocaleString(),
-        volume: volume.toLocaleString(),
-      };
-    },
-    toggleSettings() {
-      // 纯示意交互：切换主题色或弹出设置面板的占位
-      this.progressPercent = Number((Math.random() * 10 + 92).toFixed(2));
-    },
-    onSearch() {
-      // 示例交互：控制台打印关键字，真实业务由后续接入
-      if (!this.searchKeyword) return;
-      // eslint-disable-next-line no-console
-      console.log("Search keyword:", this.searchKeyword);
-    },
-    onExit() {
-      // 示例交互：返回上一页的占位逻辑
-      this.$router && this.$router.back && this.$router.back();
-    },
-    // 动态加载 BIMFACE SDK 脚本
-    /*
+    methods: {
+        // 更新时间（YYYY-MM-DD 与 HH:mm:ss）
+        updateClock() {
+            const d = new Date()
+            const pad = n => String(n).padStart(2, "0")
+            const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+            const weekMap = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
+            const time = `${weekMap[d.getDay()]} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+            this.now = { date, time }
+        },
+        refreshClock() {
+            this.updateClock()
+        },
+        getSectionStats(section) {
+            let count = 0
+            let volume = 0
+            section.piles.forEach(p => {
+                count += p.count
+                volume += p.volume
+            })
+            return {
+                count: count.toLocaleString(),
+                volume: volume.toLocaleString(),
+            }
+        },
+        toggleSettings() {
+            // 纯示意交互：切换主题色或弹出设置面板的占位
+            this.progressPercent = Number((Math.random() * 10 + 92).toFixed(2))
+        },
+        onSearch() {
+            // 示例交互：控制台打印关键字，真实业务由后续接入
+            if (!this.searchKeyword) return
+            // eslint-disable-next-line no-console
+            console.log("Search keyword:", this.searchKeyword)
+        },
+        onExit() {
+            // 示例交互：返回上一页的占位逻辑
+            this.$router && this.$router.back && this.$router.back()
+        },
+        // 动态加载 BIMFACE SDK 脚本
+        /*
     loadBimfaceSdk() {
       return new Promise((resolve, reject) => {
         if (window.BimfaceSDKLoader) return resolve()
@@ -4355,154 +4309,135 @@ export default {
       })
     },
     */
-    // 初始化并加载场景（整合 demo999 的回调）
-    initBimface() {
-      try {
-        // await this.loadBimfaceSdk()
-        // 若未传入 viewToken，使用示例 Token（仅演示）
-        this.localViewToken =
-          this.viewToken || "1373a7442bad403e8e06266df7e23aa2";
-        const loaderConfig = new window.BimfaceSDKLoaderConfig();
-        loaderConfig.viewToken = this.localViewToken;
-        window.BimfaceSDKLoader.load(
-          loaderConfig,
-          this.successCallback,
-          this.failureCallback
-        );
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error("Bimface SDK 加载失败", e);
-      }
-    },
+        // 初始化并加载场景（整合 demo999 的回调）
+        initBimface() {
+            try {
+                // await this.loadBimfaceSdk()
+                // 若未传入 viewToken，使用示例 Token（仅演示）
+                this.localViewToken = this.viewToken || "d6ef03ade6e74f6cbe750a4bb1e6821c"
+                const loaderConfig = new window.BimfaceSDKLoaderConfig()
+                loaderConfig.viewToken = this.localViewToken
+                window.BimfaceSDKLoader.load(loaderConfig, this.successCallback, this.failureCallback)
+            } catch (e) {
+                // eslint-disable-next-line no-console
+                console.error("Bimface SDK 加载失败", e)
+            }
+        },
 
-    onAdded() {
-      this.model3D = this.viewer3D.getModel();
-      this.viewer3D.render();
-    },
+        onAdded() {
+            this.model3D = this.viewer3D.getModel()
+            this.viewer3D.render()
+        },
 
-    changeBackground() {
-      document.querySelector(".bf-view").style.background =
-        "url('https://mccsbc.obs.cn-east-3.myhuaweicloud.com/project/37/png/bg01-1764923528132.png')";
-      document.querySelector(".bf-view").style.backgroundSize = "cover";
-      window.onresize = function () {
-        this.viewer3D.resize(
-          document.documentElement.clientWidth,
-          document.documentElement.clientHeight
-        );
-      };
-      //启用俯视图
-      this.viewer3D.setView(Glodon.Bimface.Viewer.ViewOption.Top);
-      //启用正交视图
-      this.viewer3D.setCameraType("OrthographicCamera");
-      //禁用场景旋转
-      this.viewer3D.enableOrbit(false);
-      // 渲染3D模型
-      this.viewer3D.render();
-    },
+        changeBackground() {
+            document.querySelector(".bf-view").style.background =
+                "url('https://mccsbc.obs.cn-east-3.myhuaweicloud.com/project/37/png/bg01-1764923528132.png')"
+            document.querySelector(".bf-view").style.backgroundSize = "cover"
+            window.onresize = function () {
+                this.viewer3D.resize(document.documentElement.clientWidth, document.documentElement.clientHeight)
+            }
+            //启用俯视图
 
-    // 成功回调：创建 WebApplication3D 并渲染
-    successCallback(viewMetaData) {
-      console.log(viewMetaData, "查看信息1");
-      const dom = document.getElementById("domId");
-      const webAppConfig =
-        new window.Glodon.Bimface.Application.WebApplication3DConfig();
-      webAppConfig.domElement = dom;
-      webAppConfig.enableViewHouse = false;
-      webAppConfig.globalUnit =
-        window.Glodon.Bimface.Common.Units.LengthUnits.Millimeter;
-      this.app = new window.Glodon.Bimface.Application.WebApplication3D(
-        webAppConfig
-      );
-      this.app.addView(this.localViewToken);
-      this.viewer3D = this.app.getViewer();
-      this.viewer3D.addEventListener(
-        window.Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded,
-        this.onAdded
-      );
-      // 初始化页面展示效果
-      this.viewer3D.addEventListener(
-        window.Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded,
-        this.changeBackground
-      );
-      console.log(this.viewer3D, "查看信息2");
-    },
-    // 失败回调
-    failureCallback(error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    },
-    // 以下四个方法与 demo999.html 的按钮功能命名保持一致；
-    // 为避免外部依赖未加载导致报错，这里做空安全保护并输出提示。
-    overrideComponentsColorById() {
-      if (!this.model3D || !this.viewer3D) return;
-      const Color = window.Glodon.Web.Graphics.Color;
-      const color = new Color("#EE799F", 1.0);
-      if (!this.isOverrideComponentsColorByIdActivated) {
-        this.model3D.overrideComponentsColorById(OVERRIDE_ID, color);
-        this.viewer3D.render();
-        this.btnTexts.id = "恢复颜色";
-      } else {
-        // 与 demo 保持一致的恢复示例
-        this.model3D.restoreComponentsColorById(OVERRIDE_ID);
-        this.viewer3D.render();
-        this.btnTexts.id = "本周完成";
-      }
-      this.isOverrideComponentsColorByIdActivated =
-        !this.isOverrideComponentsColorByIdActivated;
-    },
-    overridelookup() {
-      // eslint-disable-next-line no-console
-      console.log(this.viewer3D, "viewer3D");
-      // eslint-disable-next-line no-console
-      console.log(this.model3D, "model3D");
-    },
+            /* eslint-disable */
+            this.viewer3D.setView(Glodon.Bimface.Viewer.ViewOption.Top)
+            //启用正交视图
+            this.viewer3D.setCameraType("OrthographicCamera")
+            //禁用场景旋转
+            this.viewer3D.enableOrbit(false)
+            // 渲染3D模型
+            this.viewer3D.render()
+        },
 
-    //缩放到构件
-    zoomToComponents() {
-      this.viewer3D.getModel().clearSelectedComponents();
-      this.viewer3D.getModel().setSelectedComponentsById(["922598"]);
-      this.viewer3D.getModel().zoomToSelectedComponents();
-      this.$message({
-        message: "已缩放到构件",
-        type: "success",
-      });
-    },
+        // 成功回调：创建 WebApplication3D 并渲染
+        successCallback(viewMetaData) {
+            console.log(viewMetaData, "查看信息1")
+            const dom = document.getElementById("domId")
+            const webAppConfig = new window.Glodon.Bimface.Application.WebApplication3DConfig()
+            webAppConfig.domElement = dom
+            webAppConfig.enableViewHouse = false
+            webAppConfig.globalUnit = window.Glodon.Bimface.Common.Units.LengthUnits.Millimeter
+            this.app = new window.Glodon.Bimface.Application.WebApplication3D(webAppConfig)
+            this.app.addView(this.localViewToken)
+            this.viewer3D = this.app.getViewer()
+            this.viewer3D.addEventListener(window.Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, this.onAdded)
+            // 初始化页面展示效果
+            this.viewer3D.addEventListener(window.Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, this.changeBackground)
+            console.log(this.viewer3D, "查看信息2")
+        },
+        // 失败回调
+        failureCallback(error) {
+            // eslint-disable-next-line no-console
+            console.log(error)
+        },
+        // 以下四个方法与 demo999.html 的按钮功能命名保持一致；
+        // 为避免外部依赖未加载导致报错，这里做空安全保护并输出提示。
+        overrideComponentsColorById() {
+            if (!this.model3D || !this.viewer3D) return
+            const Color = window.Glodon.Web.Graphics.Color
+            const color = new Color("#EE799F", 1.0)
+            if (!this.isOverrideComponentsColorByIdActivated) {
+                this.model3D.overrideComponentsColorById(OVERRIDE_ID, color)
+                this.viewer3D.render()
+                this.btnTexts.id = "恢复颜色"
+            } else {
+                // 与 demo 保持一致的恢复示例
+                this.model3D.restoreComponentsColorById(OVERRIDE_ID)
+                this.viewer3D.render()
+                this.btnTexts.id = "本周完成"
+            }
+            this.isOverrideComponentsColorByIdActivated = !this.isOverrideComponentsColorByIdActivated
+        },
+        overridelookup() {
+            // eslint-disable-next-line no-console
+            console.log(this.viewer3D, "viewer3D")
+            // eslint-disable-next-line no-console
+            console.log(this.model3D, "model3D")
+        },
 
-    overrideComponentsColorByData() {
-      if (!this.model3D || !this.viewer3D) return;
-      const Color = window.Glodon.Web.Graphics.Color;
-      const color = new Color("#EE799F", 1.0);
-      if (!this.isOverrideComponentsColorByDataActivated) {
-        this.model3D.overrideComponentsColorById(OVERRIDE_IDS, color);
-        this.viewer3D.render();
-        this.btnTexts.data = "恢复颜色";
-      } else {
-        // 与 demo 保持一致的恢复示例
-        this.model3D.restoreComponentsColorById(OVERRIDE_IDS);
-        this.viewer3D.render();
-        this.btnTexts.data = "本月完成";
-      }
-      this.isOverrideComponentsColorByDataActivated =
-        !this.isOverrideComponentsColorByDataActivated;
+        //缩放到构件
+        zoomToComponents() {
+            this.viewer3D.getModel().clearSelectedComponents()
+            this.viewer3D.getModel().setSelectedComponentsById(["922598"])
+            this.viewer3D.getModel().zoomToSelectedComponents()
+            this.$message({
+                message: "已缩放到构件",
+                type: "success",
+            })
+        },
+
+        overrideComponentsColorByData() {
+            if (!this.model3D || !this.viewer3D) return
+            const Color = window.Glodon.Web.Graphics.Color
+            const color = new Color("#EE799F", 1.0)
+            if (!this.isOverrideComponentsColorByDataActivated) {
+                this.model3D.overrideComponentsColorById(OVERRIDE_IDS, color)
+                this.viewer3D.render()
+                this.btnTexts.data = "恢复颜色"
+            } else {
+                // 与 demo 保持一致的恢复示例
+                this.model3D.restoreComponentsColorById(OVERRIDE_IDS)
+                this.viewer3D.render()
+                this.btnTexts.data = "本月完成"
+            }
+            this.isOverrideComponentsColorByDataActivated = !this.isOverrideComponentsColorByDataActivated
+        },
+        overrideAllComponentsColor() {
+            if (!this.model3D || !this.viewer3D) return
+            const Color = window.Glodon.Web.Graphics.Color
+            if (!this.isOverrideAllComponentsColorActivated) {
+                const color = new Color("#E3E3E3", 0.1)
+                this.model3D.overrideAllComponentsColor(color)
+                this.viewer3D.render()
+                this.btnTexts.all = "恢复颜色"
+            } else {
+                this.model3D.clearOverrideColorComponents()
+                this.viewer3D.render()
+                this.btnTexts.all = "累计完成"
+            }
+            this.isOverrideAllComponentsColorActivated = !this.isOverrideAllComponentsColorActivated
+        },
     },
-    overrideAllComponentsColor() {
-      if (!this.model3D || !this.viewer3D) return;
-      const Color = window.Glodon.Web.Graphics.Color;
-      if (!this.isOverrideAllComponentsColorActivated) {
-        const color = new Color("#E3E3E3", 0.1);
-        this.model3D.overrideAllComponentsColor(color);
-        this.viewer3D.render();
-        this.btnTexts.all = "恢复颜色";
-      } else {
-        this.model3D.clearOverrideColorComponents();
-        this.viewer3D.render();
-        this.btnTexts.all = "累计完成";
-      }
-      this.isOverrideAllComponentsColorActivated =
-        !this.isOverrideAllComponentsColorActivated;
-    },
-  },
-};
+}
 </script>
 
 <style scoped lang="scss">
@@ -4516,701 +4451,670 @@ $text: #cfe8ff;
 $muted: #7aa2c8;
 
 .pile-visualization {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: radial-gradient(
-      1200px 600px at 50% 100%,
-      rgba(88, 166, 255, 0.12),
-      transparent 60%
-    ),
-    linear-gradient(180deg, #0b274a 0%, #081f3a 60%, #071933 100%);
-  color: $text;
-  overflow: hidden;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: radial-gradient(1200px 600px at 50% 100%, rgba(88, 166, 255, 0.12), transparent 60%),
+        linear-gradient(180deg, #0b274a 0%, #081f3a 60%, #071933 100%);
+    color: $text;
+    overflow: hidden;
 }
 
 .pile-visualization {
-  position: relative;
+    position: relative;
 }
 .pile-visualization::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: radial-gradient(
-      2px 2px at 20% 30%,
-      rgba(88, 166, 255, 0.5),
-      transparent 60%
-    ),
-    radial-gradient(2px 2px at 70% 50%, rgba(0, 231, 255, 0.5), transparent 60%),
-    radial-gradient(
-      1.5px 1.5px at 40% 80%,
-      rgba(88, 166, 255, 0.35),
-      transparent 60%
-    );
-  animation: drift 20s linear infinite;
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(2px 2px at 20% 30%, rgba(88, 166, 255, 0.5), transparent 60%),
+        radial-gradient(2px 2px at 70% 50%, rgba(0, 231, 255, 0.5), transparent 60%),
+        radial-gradient(1.5px 1.5px at 40% 80%, rgba(88, 166, 255, 0.35), transparent 60%);
+    animation: drift 20s linear infinite;
 }
 @keyframes drift {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(-20px, -10px, 0);
-  }
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+    to {
+        transform: translate3d(-20px, -10px, 0);
+    }
 }
 
 .topbar {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 20px 6px;
-  background-image: url("~@/views/showBigScreen/img/header.png");
-  border-bottom: 1px solid rgba(88, 166, 255, 0.25);
-
-  .topbar__left {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-  .topbar__center {
-    text-align: center;
-  }
-  .topbar__right {
-    display: flex;
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: 16px;
-    justify-self: end;
-  }
+    padding: 12px 20px 6px;
+    background-image: url("~@/views/showBigScreen/img/header.png");
+    border-bottom: 1px solid rgba(88, 166, 255, 0.25);
 
-  .title {
-    margin: 0;
-    letter-spacing: 2px;
-    font-weight: 700;
-    font-size: 22px;
-    color: #e8f6ff;
-    text-shadow: 0 0 12px rgba(0, 231, 255, 0.45);
-  }
-
-  .datetime {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 13px;
-    color: $muted;
-  }
-  .status-tabs {
-    display: flex;
-    gap: 8px;
-  }
-
-  .chip {
-    background: rgba(88, 166, 255, 0.12);
-    border: 1px solid rgba(88, 166, 255, 0.35);
-    color: $text;
-    padding: 6px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    &.active {
-      background: rgba(0, 231, 255, 0.2);
-      border-color: $primary;
-      box-shadow: 0 0 12px rgba(0, 231, 255, 0.35) inset;
+    .topbar__left {
+        display: flex;
+        align-items: center;
+        gap: 20px;
     }
-  }
-
-  .counters {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    margin-top: 6px;
-  }
-  .counter {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 10px;
-    border-radius: 12px;
-    background: rgba(0, 231, 255, 0.08);
-    border: 1px solid rgba(0, 231, 255, 0.25);
-    .counter__icon {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: $primary;
-      box-shadow: 0 0 8px rgba(0, 231, 255, 0.8);
+    .topbar__center {
+        text-align: center;
     }
-    .counter__num {
-      font-weight: 600;
-      color: #eaf8ff;
-      font-size: 14px;
+    .topbar__right {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        justify-self: end;
     }
-  }
 
-  .search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .search input {
-    width: 200px;
-    height: 28px;
-    padding: 0 10px;
-    border-radius: 6px;
-    border: 1px solid rgba(88, 166, 255, 0.35);
-    background: rgba(8, 31, 58, 0.7);
-    color: $text;
-    outline: none;
-  }
-  .btn {
-    height: 28px;
-    padding: 0 12px;
-    border-radius: 6px;
-    background: $accent;
-    border: none;
-    color: #fff;
-    cursor: pointer;
-  }
-  .icon-btn {
-    width: 32px;
-    height: 28px;
-    border: 1px solid rgba(88, 166, 255, 0.35);
-    border-radius: 6px;
-    background: rgba(88, 166, 255, 0.12);
-    color: #eaf8ff;
-    cursor: pointer;
-  }
-  .update-time {
-    font-size: 12px;
-    color: $muted;
-  }
+    .title {
+        margin: 0;
+        letter-spacing: 2px;
+        font-weight: 700;
+        font-size: 22px;
+        color: #e8f6ff;
+        text-shadow: 0 0 12px rgba(0, 231, 255, 0.45);
+    }
+
+    .datetime {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        color: $muted;
+    }
+    .status-tabs {
+        display: flex;
+        gap: 8px;
+    }
+
+    .chip {
+        background: rgba(88, 166, 255, 0.12);
+        border: 1px solid rgba(88, 166, 255, 0.35);
+        color: $text;
+        padding: 6px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        &.active {
+            background: rgba(0, 231, 255, 0.2);
+            border-color: $primary;
+            box-shadow: 0 0 12px rgba(0, 231, 255, 0.35) inset;
+        }
+    }
+
+    .counters {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin-top: 6px;
+    }
+    .counter {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        background: rgba(0, 231, 255, 0.08);
+        border: 1px solid rgba(0, 231, 255, 0.25);
+        .counter__icon {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: $primary;
+            box-shadow: 0 0 8px rgba(0, 231, 255, 0.8);
+        }
+        .counter__num {
+            font-weight: 600;
+            color: #eaf8ff;
+            font-size: 14px;
+        }
+    }
+
+    .search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .search input {
+        width: 200px;
+        height: 28px;
+        padding: 0 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(88, 166, 255, 0.35);
+        background: rgba(8, 31, 58, 0.7);
+        color: $text;
+        outline: none;
+    }
+    .btn {
+        height: 28px;
+        padding: 0 12px;
+        border-radius: 6px;
+        background: $accent;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+    }
+    .icon-btn {
+        width: 32px;
+        height: 28px;
+        border: 1px solid rgba(88, 166, 255, 0.35);
+        border-radius: 6px;
+        background: rgba(88, 166, 255, 0.12);
+        color: #eaf8ff;
+        cursor: pointer;
+    }
+    .update-time {
+        font-size: 12px;
+        color: $muted;
+    }
 }
 
 .topbar-hud {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -2px;
-  height: 12px;
-  pointer-events: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 12px;
+    pointer-events: none;
 }
 
 .main {
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 16px;
-  padding: 16px;
-  height: calc(100% - 70px);
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 16px;
+    padding: 16px;
+    height: calc(100% - 70px);
 }
 
 .left-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  background: linear-gradient(
-    180deg,
-    rgba(8, 31, 58, 0.65),
-    rgba(7, 25, 51, 0.8)
-  );
-  border: 1px solid rgba(88, 166, 255, 0.25);
-  border-radius: 10px;
-  padding: 12px;
-  transition: width 0.25s ease, opacity 0.25s ease;
-  &.collapsed {
-    width: 60px;
-    opacity: 0.85;
-  }
-
-  .panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 14px;
-    color: #eaf8ff;
-  }
-  .toggle {
-    background: rgba(88, 166, 255, 0.12);
-    border: 1px solid rgba(88, 166, 255, 0.35);
-    color: $text;
-    padding: 4px 8px;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-
-  .gauge {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 10px;
-    align-items: center;
-  }
-  .gauge__ring {
-    width: 160px;
-    height: 160px;
-    border-radius: 50%;
-    position: relative;
-    box-shadow: 0 0 20px rgba(0, 231, 255, 0.35);
-    background: conic-gradient($primary 0deg, #103a6e 0);
-  }
-  .gauge__inner {
-    position: absolute;
-    inset: 12px;
-    border-radius: 50%;
-    background: $bg-deep;
-    display: grid;
-    place-items: center;
-    gap: 6px;
-    box-shadow: inset 0 0 14px rgba(0, 231, 255, 0.15);
-  }
-  .gauge__percent {
-    font-size: 20px;
-    font-weight: 700;
-    color: #eaf8ff;
-  }
-  .gauge__caption {
-    font-size: 12px;
-    color: $muted;
-  }
-  .gauge__legend {
-    display: grid;
-    gap: 8px;
-  }
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: $muted;
-    font-size: 12px;
-  }
-  .dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-  }
-  .dot--red {
-    background: $red;
-    box-shadow: 0 0 10px rgba(255, 59, 59, 0.8);
-  }
-  .dot--white {
-    background: #fff;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
-  }
-
-  .metrics {
-    display: grid;
-    gap: 10px;
-  }
-  .metric__row {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 8px;
-    align-items: center;
-    font-size: 12px;
-    color: $text;
-  }
-  .map-legend{
-    img{
-      width: 330px;
-      height: 200px;
-    }
-  }
-  .bar {
-    height: 8px;
-    background: rgba(88, 166, 255, 0.12);
-    border: 1px solid rgba(88, 166, 255, 0.35);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  .bar__fill {
-    height: 100%;
-    background: linear-gradient(90deg, #00e7ff, #58a6ff);
-    box-shadow: 0 0 10px rgba(0, 231, 255, 0.35);
-  }
-
-  .engineering-stats {
-    margin-top: 6px;
-    flex: 1;
-    min-height: 0;
     display: flex;
     flex-direction: column;
-
-    .panel-container {
-      width: 100%;
-      height: 250px;
-      background-color: #1f2937;
-      border-radius: 0.75rem;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-      border: 2px solid #06b6d4;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+    gap: 14px;
+    background: linear-gradient(180deg, rgba(8, 31, 58, 0.65), rgba(7, 25, 51, 0.8));
+    border: 1px solid rgba(88, 166, 255, 0.25);
+    border-radius: 10px;
+    padding: 12px;
+    transition: width 0.25s ease, opacity 0.25s ease;
+    &.collapsed {
+        width: 60px;
+        opacity: 0.85;
     }
 
     .panel-header {
-      padding: 0.75rem;
-      background-color: #374151;
-      border-bottom: 2px solid #0891b2;
-      flex-shrink: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 14px;
+        color: #eaf8ff;
+    }
+    .toggle {
+        background: rgba(88, 166, 255, 0.12);
+        border: 1px solid rgba(88, 166, 255, 0.35);
+        color: $text;
+        padding: 4px 8px;
+        border-radius: 6px;
+        cursor: pointer;
     }
 
-    .panel-title {
-      font-size: 1.125rem;
-      font-weight: 700;
-      color: #22d3ee;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin: 0;
+    .gauge {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+    }
+    .gauge__ring {
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        position: relative;
+        box-shadow: 0 0 20px rgba(0, 231, 255, 0.35);
+        background: conic-gradient($primary 0deg, #103a6e 0);
+    }
+    .gauge__inner {
+        position: absolute;
+        inset: 12px;
+        border-radius: 50%;
+        background: $bg-deep;
+        display: grid;
+        place-items: center;
+        gap: 6px;
+        box-shadow: inset 0 0 14px rgba(0, 231, 255, 0.15);
+    }
+    .gauge__percent {
+        font-size: 20px;
+        font-weight: 700;
+        color: #eaf8ff;
+    }
+    .gauge__caption {
+        font-size: 12px;
+        color: $muted;
+    }
+    .gauge__legend {
+        display: grid;
+        gap: 8px;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: $muted;
+        font-size: 12px;
+    }
+    .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .dot--red {
+        background: $red;
+        box-shadow: 0 0 10px rgba(255, 59, 59, 0.8);
+    }
+    .dot--white {
+        background: #fff;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
     }
 
-    .panel-summary {
-      font-size: 0.75rem;
-      color: #9ca3af;
-      margin-top: 0.25rem;
+    .metrics {
+        display: grid;
+        gap: 10px;
+    }
+    .metric__row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 8px;
+        align-items: center;
+        font-size: 12px;
+        color: $text;
+    }
+    .map-legend {
+        img {
+            width: 330px;
+            height: 200px;
+        }
+    }
+    .bar {
+        height: 8px;
+        background: rgba(88, 166, 255, 0.12);
+        border: 1px solid rgba(88, 166, 255, 0.35);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    .bar__fill {
+        height: 100%;
+        background: linear-gradient(90deg, #00e7ff, #58a6ff);
+        box-shadow: 0 0 10px rgba(0, 231, 255, 0.35);
     }
 
-    .highlight {
-      color: #67e8f9;
-      font-weight: 700;
-    }
+    .engineering-stats {
+        margin-top: 6px;
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
 
-    .content-container {
-      flex-grow: 1;
-      overflow-y: auto;
-      padding: 0.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
+        .panel-container {
+            width: 100%;
+            height: 250px;
+            background-color: #1f2937;
+            border-radius: 0.75rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 2px solid #06b6d4;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
-      &::-webkit-scrollbar {
-        width: 6px;
-      }
-      &::-webkit-scrollbar-thumb {
-        background-color: #38bdf8;
-        border-radius: 3px;
-      }
-      &::-webkit-scrollbar-track {
-        background: #1f2937;
-      }
-    }
+        .panel-header {
+            padding: 0.75rem;
+            background-color: #374151;
+            border-bottom: 2px solid #0891b2;
+            flex-shrink: 0;
+        }
 
-    .section-card {
-      background-color: #374151;
-      padding: 0.75rem;
-      border-radius: 0.5rem;
-      border: 1px solid #4b5563;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-        0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
+        .panel-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #22d3ee;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin: 0;
+        }
 
-    .section-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: white;
-      margin-bottom: 0.5rem;
-    }
+        .panel-summary {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-top: 0.25rem;
+        }
 
-    .section-summary {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #9ca3af;
-      margin-bottom: 0.5rem;
-      border-bottom: 1px solid #4b5563;
-      padding-bottom: 0.25rem;
-    }
+        .highlight {
+            color: #67e8f9;
+            font-weight: 700;
+        }
 
-    .highlight-cyan {
-      color: #22d3ee;
-    }
+        .content-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
 
-    .pile-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
+            &::-webkit-scrollbar {
+                width: 6px;
+            }
+            &::-webkit-scrollbar-thumb {
+                background-color: #38bdf8;
+                border-radius: 3px;
+            }
+            &::-webkit-scrollbar-track {
+                background: #1f2937;
+            }
+        }
 
-    .list-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.75rem;
-      font-weight: 500;
-      color: #6b7280;
-      border-bottom: 1px solid #374151;
-      padding-bottom: 0.125rem;
-      margin-bottom: 0.25rem;
-    }
+        .section-card {
+            background-color: #374151;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #4b5563;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
 
-    .pile-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.75rem;
-      color: #d1d5db;
-    }
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 0.5rem;
+        }
 
-    .col-type {
-      width: 50%;
-      padding-right: 0.25rem;
-    }
-    .col-count {
-      width: 25%;
-      text-align: right;
-    }
-    .col-volume {
-      width: 25%;
-      text-align: right;
-    }
+        .section-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid #4b5563;
+            padding-bottom: 0.25rem;
+        }
 
-    .truncate {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+        .highlight-cyan {
+            color: #22d3ee;
+        }
+
+        .pile-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6b7280;
+            border-bottom: 1px solid #374151;
+            padding-bottom: 0.125rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .pile-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: #d1d5db;
+        }
+
+        .col-type {
+            width: 50%;
+            padding-right: 0.25rem;
+        }
+        .col-count {
+            width: 25%;
+            text-align: right;
+        }
+        .col-volume {
+            width: 25%;
+            text-align: right;
+        }
+
+        .truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
     }
-  }
 }
 
 .viewport {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .filters {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  .filter-group {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     align-items: center;
-  }
-  .filter-label {
-    font-size: 12px;
-    color: $muted;
-  }
-  .chip {
-    background: rgba(88, 166, 255, 0.12);
-    border: 1px solid rgba(88, 166, 255, 0.35);
-    color: $text;
-    padding: 6px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    cursor: pointer;
-    &.active {
-      background: rgba(0, 231, 255, 0.2);
-      border-color: $primary;
+    .filter-group {
+        display: flex;
+        gap: 8px;
+        align-items: center;
     }
-  }
+    .filter-label {
+        font-size: 12px;
+        color: $muted;
+    }
+    .chip {
+        background: rgba(88, 166, 255, 0.12);
+        border: 1px solid rgba(88, 166, 255, 0.35);
+        color: $text;
+        padding: 6px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        cursor: pointer;
+        &.active {
+            background: rgba(0, 231, 255, 0.2);
+            border-color: $primary;
+        }
+    }
 }
 .complete-group {
-  button {
-    width: 125px;
-    height: 30px;
-    border-radius: 6px;
-    margin-left: 10px;
-    border: 1px solid rgba(88, 166, 255, 0.35);
-    background: linear-gradient(180deg, #0b274a, #081f3a);
-    color: #eaf8ff;
-    cursor: pointer;
-  }
+    button {
+        width: 125px;
+        height: 30px;
+        border-radius: 6px;
+        margin-left: 10px;
+        border: 1px solid rgba(88, 166, 255, 0.35);
+        background: linear-gradient(180deg, #0b274a, #081f3a);
+        color: #eaf8ff;
+        cursor: pointer;
+    }
 }
 
 .model-frame {
-  position: relative;
-  flex: 1;
-  min-height: 480px;
-  background: rgba(12, 26, 51, 0.6);
-  border: 2px solid rgba(12, 26, 51, 0.6);
-  border-radius: 8px;
-  box-shadow: inset 0 0 24px rgba(255, 59, 59, 0.25),
-    0 0 30px rgba(88, 166, 255, 0.18);
+    position: relative;
+    flex: 1;
+    min-height: 480px;
+    background: rgba(12, 26, 51, 0.6);
+    border: 2px solid rgba(12, 26, 51, 0.6);
+    border-radius: 8px;
+    box-shadow: inset 0 0 24px rgba(255, 59, 59, 0.25), 0 0 30px rgba(88, 166, 255, 0.18);
 }
 
 .model {
-  width: 100%;
-  height: 100%;
+    width: 100%;
+    height: 100%;
 }
 
 .overlay {
-  pointer-events: none;
+    pointer-events: none;
 }
 .overlay .hud-grid {
-  position: absolute;
-  inset: 0;
-  background-image: linear-gradient(
-      rgba(88, 166, 255, 0.08) 1px,
-      transparent 1px
-    ),
-    linear-gradient(90deg, rgba(88, 166, 255, 0.08) 1px, transparent 1px);
-  background-size: 32px 32px, 32px 32px;
-  border-radius: 8px;
-  mask: linear-gradient(#000, transparent 85%);
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(rgba(88, 166, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(88, 166, 255, 0.08) 1px, transparent 1px);
+    background-size: 32px 32px, 32px 32px;
+    border-radius: 8px;
+    mask: linear-gradient(#000, transparent 85%);
 }
 .overlay .scan-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 140px;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 231, 255, 0),
-    rgba(0, 231, 255, 0.18),
-    rgba(0, 231, 255, 0)
-  );
-  animation: sweep 4s linear infinite;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 140px;
+    background: linear-gradient(180deg, rgba(0, 231, 255, 0), rgba(0, 231, 255, 0.18), rgba(0, 231, 255, 0));
+    animation: sweep 4s linear infinite;
 }
 @keyframes sweep {
-  from {
-    transform: translateY(-140px);
-  }
-  to {
-    transform: translateY(100%);
-  }
+    from {
+        transform: translateY(-140px);
+    }
+    to {
+        transform: translateY(100%);
+    }
 }
 .corner {
-  position: absolute;
-  width: 22px;
-  height: 22px;
-  stroke: rgba(0, 231, 255, 0.7);
-  stroke-width: 2;
-  fill: none;
-  filter: drop-shadow(0 0 6px rgba(0, 231, 255, 0.6));
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    stroke: rgba(0, 231, 255, 0.7);
+    stroke-width: 2;
+    fill: none;
+    filter: drop-shadow(0 0 6px rgba(0, 231, 255, 0.6));
 }
 .corner path {
-  stroke-linecap: round;
-  stroke-dasharray: 18 6;
-  animation: dash 2.8s linear infinite;
+    stroke-linecap: round;
+    stroke-dasharray: 18 6;
+    animation: dash 2.8s linear infinite;
 }
 @keyframes dash {
-  from {
-    stroke-dashoffset: 24;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
+    from {
+        stroke-dashoffset: 24;
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
 }
 .corner--lt {
-  left: -1px;
-  top: -1px;
+    left: -1px;
+    top: -1px;
 }
 .corner--rt {
-  right: -1px;
-  top: -1px;
+    right: -1px;
+    top: -1px;
 }
 .corner--lb {
-  left: -1px;
-  bottom: -1px;
+    left: -1px;
+    bottom: -1px;
 }
 .corner--rb {
-  right: -1px;
-  bottom: -1px;
+    right: -1px;
+    bottom: -1px;
 }
 
 // demo999.html 结构样式整合：按钮与模型容器
 .demo999 {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 .demo999 .buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px;
-  background: rgba(88, 166, 255, 0.06);
-  border-bottom: 1px solid rgba(88, 166, 255, 0.15);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(88, 166, 255, 0.06);
+    border-bottom: 1px solid rgba(88, 166, 255, 0.15);
 }
 .demo999 .button {
-  width: 125px;
-  height: 30px;
-  border-radius: 6px;
-  border: 1px solid rgba(88, 166, 255, 0.35);
-  background: linear-gradient(180deg, #0b274a, #081f3a);
-  color: #eaf8ff;
-  cursor: pointer;
-  box-shadow: 0 0 8px rgba(0, 231, 255, 0.15) inset;
-  transition: all 0.2s ease;
+    width: 125px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid rgba(88, 166, 255, 0.35);
+    background: linear-gradient(180deg, #0b274a, #081f3a);
+    color: #eaf8ff;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0, 231, 255, 0.15) inset;
+    transition: all 0.2s ease;
 }
 .demo999 .button:hover {
-  border-color: #00e7ff;
-  box-shadow: 0 0 10px rgba(0, 231, 255, 0.25) inset,
-    0 0 8px rgba(0, 231, 255, 0.25);
+    border-color: #00e7ff;
+    box-shadow: 0 0 10px rgba(0, 231, 255, 0.25) inset, 0 0 8px rgba(0, 231, 255, 0.25);
 }
 .demo999 .model {
-  flex: 1;
+    flex: 1;
 }
 
 // 响应式适配
 @media (max-width: 1280px) {
-  .main {
-    grid-template-columns: 300px 1fr;
-  }
-  .left-panel .gauge__ring {
-    width: 140px;
-    height: 140px;
-  }
+    .main {
+        grid-template-columns: 300px 1fr;
+    }
+    .left-panel .gauge__ring {
+        width: 140px;
+        height: 140px;
+    }
 }
 @media (max-width: 1024px) {
-  .topbar {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-  .topbar__right {
-    justify-self: start;
-  }
-  .main {
-    grid-template-columns: 1fr;
-  }
-  .left-panel {
-    order: 2;
-  }
-  .viewport {
-    order: 1;
-  }
+    .topbar {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .topbar__right {
+        justify-self: start;
+    }
+    .main {
+        grid-template-columns: 1fr;
+    }
+    .left-panel {
+        order: 2;
+    }
+    .viewport {
+        order: 1;
+    }
 }
 
 /* 额外的动画增强 */
 .left-panel .gauge__ring {
-  overflow: hidden;
+    overflow: hidden;
 }
 .left-panel .gauge__ring::after {
-  content: "";
-  position: absolute;
-  inset: -10px;
-  border-radius: 50%;
-  background: radial-gradient(
-      closest-side,
-      rgba(0, 231, 255, 0.08),
-      transparent 40%
-    ),
-    conic-gradient(from 0deg, rgba(88, 166, 255, 0.08), transparent 30%);
-  animation: spin 8s linear infinite;
+    content: "";
+    position: absolute;
+    inset: -10px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(0, 231, 255, 0.08), transparent 40%),
+        conic-gradient(from 0deg, rgba(88, 166, 255, 0.08), transparent 30%);
+    animation: spin 8s linear infinite;
 }
 .topbar .counter__icon {
-  animation: pulse 2s ease-in-out infinite;
+    animation: pulse 2s ease-in-out infinite;
 }
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+    to {
+        transform: rotate(360deg);
+    }
 }
 @keyframes pulse {
-  0%,
-  100% {
-    opacity: 0.7;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.2);
-  }
+    0%,
+    100% {
+        opacity: 0.7;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.2);
+    }
 }
 </style>
