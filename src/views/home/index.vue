@@ -47,14 +47,14 @@
                     <button class="search-btn" @click="searchPile">🔍</button>
                 </div>
 
-                <div class="nav-buttons">
+                <div class="nav-buttons__right">
                     <button class="nav-btn" :class="{ active: typeADisplay }" @click="typeABtn">
                         <img src="@/assets/img/typeA.png" alt="" /> 类型
                     </button>
-                    <button class="nav-btn" :class="{ active: typeBDisplay }">
+                    <button class="nav-btn" :class="{ active: typeBDisplay }" @click="typeBBtn">
                         <img src="@/assets/img/typeB.png" alt="" /> 图纸
                     </button>
-                    <button class="nav-btn" :class="{ active: typeCDisplay }">
+                    <button class="nav-btn" :class="{ active: typeCDisplay }" @click="typeCBtn">
                         <img src="@/assets/img/typeC.png" alt="" /> 分区
                     </button>
                     <button class="nav-btn active"><img src="@/assets/img/typeD.png" alt="" /> 现场验收</button>
@@ -198,7 +198,7 @@ export default {
                 { name: "六标", value: "1458/1521", percent: "96%" },
             ],
             zoneData: [
-                { title: "三标 - A区", percent: "98.78%", current: 974, total: 986 },
+                { title: "三标 - A区", percent: "50%", current: 500, total: 986 },
                 { title: "三标 - B区", percent: "98.78%", current: 611, total: 635 },
                 { title: "四标 - A区", percent: "100%", current: 357, total: 357 },
                 { title: "四标 - B区", percent: "95.29%", current: 243, total: 255 },
@@ -207,8 +207,10 @@ export default {
             ],
             activeFooterIndex: 0,
             activeLeftBtnIndex: 0,
-            typeADisplay: true,
-            typeBDisplay: true,
+            typeADisplay: false,
+            //图纸是否加载
+            typeBDisplay: false,
+            // 分区是否加载
             typeCDisplay: false,
             updateTime: "2025-12-18",
 
@@ -224,6 +226,12 @@ export default {
 
             //缩放到定位构件的列表
             searchComponents: [],
+            isBModelAdded: false,
+            isCModelAdded: false,
+
+            modelId: "10000776931924",
+            modelId_2: "10000955511347",
+            modelId_3: "10000776931926",
         }
     },
     // 新增：组件挂载后启动定时器
@@ -283,7 +291,66 @@ export default {
         //点击类型按钮时的操作
         typeABtn() {
             this.typeADisplay = !this.typeADisplay
-            this.setMainView()
+        },
+        //点击图纸按钮时的操作
+        typeBBtn() {
+            if (!this.typeBDisplay) {
+                this.addBModel()
+                this.typeBDisplay = !this.typeBDisplay
+            } else {
+                this.removeBModel()
+                this.typeBDisplay = !this.typeBDisplay
+            }
+        },
+        addBModel() {
+            if (this.isBModelAdded) {
+                return
+            }
+            // cc78628cd1fb4aa1a5dc3130e671b2a7 58713f304f5a4812a81019405421ba41
+            this.viewer3D.loadModel({
+                // 待加载模型的浏览凭证
+                viewToken: "58713f304f5a4812a81019405421ba41",
+                // 自定义模型ID，默认为文件ID
+                modelId: this.modelId_2,
+            })
+        },
+        removeBModel() {
+            if (!this.isBModelAdded) {
+                return
+            }
+            this.viewer3D.removeModel(this.modelId_2)
+            this.isBModelAdded = false
+            this.viewer3D.render()
+        },
+
+        //点击分区按钮时的操作
+        typeCBtn() {
+            if (!this.typeCDisplay) {
+                this.addCModel()
+                this.typeCDisplay = !this.typeCDisplay
+            } else {
+                this.removeCModel()
+                this.typeCDisplay = !this.typeCDisplay
+            }
+        },
+        addCModel() {
+            if (this.isCModelAdded) {
+                return
+            }
+            this.viewer3D.loadModel({
+                // 待加载模型的浏览凭证
+                viewToken: "58713f304f5a4812a81019405421ba41",
+                // 自定义模型ID，默认为文件ID
+                modelId: this.modelId_3,
+            })
+        },
+        removeCModel() {
+            if (!this.isCModelAdded) {
+                return
+            }
+            this.viewer3D.removeModel(this.modelId_3)
+            this.isCModelAdded = false
+            this.viewer3D.render()
         },
 
         //加载BImface的方法
@@ -292,7 +359,7 @@ export default {
             try {
                 // await this.loadBimfaceSdk()
                 // 若未传入 viewToken，使用示例 Token（仅演示）
-                this.localViewToken = this.viewToken || "d6ef03ade6e74f6cbe750a4bb1e6821c"
+                this.localViewToken = this.viewToken || "b904bcdfb732426db62423dfd7a91c1a"
                 const loaderConfig = new window.BimfaceSDKLoaderConfig()
                 loaderConfig.viewToken = this.localViewToken
                 window.BimfaceSDKLoader.load(loaderConfig, this.successCallback, this.failureCallback)
@@ -336,8 +403,7 @@ export default {
         setMainView() {
             let homeview = this.viewer3D.getCameraStatus()
             this.viewer3D.getCamera().setHomeView({ status: homeview })
-            window.alert(JSON.stringify(homeview))
-    
+            // window.alert(JSON.stringify(homeview))
         },
         // 成功回调：创建 WebApplication3D 并渲染
         successCallback(viewMetaData) {
@@ -350,10 +416,63 @@ export default {
             this.app = new window.Glodon.Bimface.Application.WebApplication3D(webAppConfig)
             this.app.addView(this.localViewToken)
             this.viewer3D = this.app.getViewer()
-            this.viewer3D.addEventListener(window.Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, this.onAdded)
-            // 初始化页面展示效果
-            this.viewer3D.addEventListener(window.Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, this.changeBackground)
-            this.viewer3D.addEventListener(window.Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, this.initDisplayStyle)
+            // this.viewer3D.addEventListener(window.Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, this.onAdded)
+            // // 初始化页面展示效果
+            // this.viewer3D.addEventListener(window.Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, this.changeBackground)
+            // this.viewer3D.addEventListener(window.Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, this.initDisplayStyle)
+            this.viewer3D.addEventListener(window.Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, () => {
+                // 1. 基础设置（背景等）
+                this.onAdded();
+                this.changeBackground();
+
+                // 2. 【插入你需要的逻辑】定义渲染完成后的回调
+                const onRenderComplete = () => {
+                    // A. 马上移除监听，防止后续操作重复触发
+                    this.viewer3D.removeEventListener(window.Glodon.Bimface.Viewer.Viewer3DEvent.Rendered, onRenderComplete);
+                    
+                    // B. 此时俯视图肯定渲染好了，执行保存
+                   setTimeout(() => {
+                        console.log("延时结束，自动保存为默认 Home 视图...");
+                        this.setMainView();
+                    }, 1500);
+                };
+
+                // 3. 【关键】先挂载监听器 (必须在调用 initDisplayStyle 之前！)
+                // 这样才能捕获到 initDisplayStyle 引起的画面变化
+                this.viewer3D.addEventListener(window.Glodon.Bimface.Viewer.Viewer3DEvent.Rendered, onRenderComplete);
+
+                // 4. 执行视图切换 (切换到俯视图、正交模式)
+                // 这行代码执行后，引擎会开始渲染，随即触发上面的 onRenderComplete
+                this.initDisplayStyle();
+                
+                });
+            //添加图纸模型事件回调
+            this.viewer3D.addEventListener(Glodon.Bimface.Viewer.Viewer3DEvent.ModelAdded, ()=> {
+                    if (this.isBModelAdded) {
+                        return
+                    }
+                    //从viewer3D对象中获取模型对象model3D
+                    let model3D = this.viewer3D.getModel(this.modelId_2);
+                    if(model3D){
+                    // 平移模型
+                    model3D.setModelTranslation({ x: 40000, y: 0, z: 0 });
+                    this.isBModelAdded = true
+                    }
+                    
+                });
+            //添加分区模型事件回调
+            this.viewer3D.addEventListener(Glodon.Bimface.Viewer.Viewer3DEvent.ModelAdded, ()=> {
+                    if (this.isCModelAdded) {
+                        return
+                    }
+                    //从viewer3D对象中获取模型对象model3D
+                    let model3D = this.viewer3D.getModel(this.modelId_3);
+                    if(model3D){
+                    // 平移模型
+                    model3D.setModelTranslation({ x: 160000, y: 0, z: 0 });
+                    this.isCModelAdded = true
+                    }
+                });
             console.log(this.viewer3D, "查看信息2")
         },
         // 失败回调
@@ -408,72 +527,138 @@ $font-family: "Microsoft YaHei", sans-serif;
 }
 
 /* --- Header --- */
+// .header {
+//     height: 110px;
+//     width: 100%;
+//     display: flex;
+//     justify-content: space-between;
+//     align-items: center;
+//     background-image: url("~@/assets/img/headerBg.png");
+//     position: relative;
+//     box-shadow: 0 0 20px rgba(0, 150, 255, 0.2);
+//     z-index: 10;
+
+//     .header-content {
+//         display: flex;
+//         width: 100%;
+//         justify-content: space-between;
+//         align-items: flex-start;
+//         padding: 0 20px;
+//         margin-top: 10px;
+//     }
+
+//     .header-left,
+//     .header-right {
+//         display: flex;
+//         align-items: center;
+//         font-size: 14px;
+//         color: #a0cfff;
+//     }
+//     .header-left {
+//         gap: 10px;
+//     }
+//     .header-right {
+//         .icon-btn {
+//             margin-left: 34px;
+//             background: transparent;
+//             border: none;
+//             cursor: pointer;
+//         }
+//         .exit-btn {
+//             margin-left: 34px;
+//         }
+//     }
+
+//     .header-center {
+//         text-align: center;
+//         position: absolute;
+//         flex-shrink: 1;
+//         left: 50%;
+//         transform: translateX(-50%);
+//         top: 20px;
+
+//         .title {
+//             font-family: Source Han Sans CN, Source Han Sans CN;
+//             font-weight: 800;
+//             font-size: 32px;
+//             line-height: 40px;
+//             text-shadow: 0px 2px 4px rgba(14, 26, 42, 0.4);
+//             text-align: center;
+//             font-style: normal;
+//             text-transform: none;
+
+//             /* --- 关键修改部分 --- */
+//             background: linear-gradient(90deg, #ffffff 0%, #c0ebff 35%, #ffffff 0%);
+//             -webkit-background-clip: text; /* 将背景裁剪到文字上 */
+//             background-clip: text; /* 标准写法 */
+//             color: transparent; /* 必须让文字颜色透明，才能看到底下的背景渐变 */
+//             /* -------------------- */
+//         }
+//     }
+
+//     .exit-btn {
+//         background: transparent;
+//         border: 1px solid #a0cfff;
+//         color: #a0cfff;
+//         padding: 4px 12px;
+//         border-radius: 4px;
+//         cursor: pointer;
+//         &:hover {
+//             background: rgba(255, 255, 255, 0.1);
+//         }
+//     }
+// }
+
 .header {
     height: 110px;
     width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-image: url("~@/assets/img/headerBg.png");
+    background: url("~@/assets/img/headerBg.png") no-repeat center center;
+    background-size: 100% 100%; 
     position: relative;
-    box-shadow: 0 0 20px rgba(0, 150, 255, 0.2);
-    z-index: 10;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
 
     .header-content {
         display: flex;
         width: 100%;
-        justify-content: space-between;
-        align-items: flex-start;
         padding: 0 20px;
-        margin-top: 10px;
-    }
+        z-index: 2;
 
-    .header-left,
-    .header-right {
-        display: flex;
-        align-items: center;
-        font-size: 14px;
-        color: #a0cfff;
-    }
-    .header-left {
-        gap: 10px;
-    }
-    .header-right {
-        .icon-btn {
-            margin-left: 34px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
+        .header-left {
+            flex: 1; /* 占据左侧 */
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
-        .exit-btn {
-            margin-left: 34px;
+
+        .header-right {
+            flex: 1; /* 占据右侧 */
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 20px;
         }
     }
 
     .header-center {
-        text-align: center;
         position: absolute;
-        flex-shrink: 1;
         left: 50%;
-        transform: translateX(-50%);
-        top: 20px;
+        top: 45%; /* 根据你底图的视觉中心微调，比如 20px 或 50% */
+        transform: translate(-50%, -50%);
+        text-align: center;
+        white-space: nowrap;
+        pointer-events: none;
+        z-index: 1; /* 标题在底层背景之上，但在交互按钮之下 */
 
         .title {
-            font-family: Source Han Sans CN, Source Han Sans CN;
-            font-weight: 800;
             font-size: 32px;
-            line-height: 40px;
-            text-shadow: 0px 2px 4px rgba(14, 26, 42, 0.4);
-            text-align: center;
-            font-style: normal;
-            text-transform: none;
-
-            /* --- 关键修改部分 --- */
-            background: linear-gradient(90deg, #ffffff 0%, #c0ebff 35%, #ffffff 0%);
-            -webkit-background-clip: text; /* 将背景裁剪到文字上 */
-            background-clip: text; /* 标准写法 */
-            color: transparent; /* 必须让文字颜色透明，才能看到底下的背景渐变 */
-            /* -------------------- */
+            font-weight: 800;
+            /* 渐变样式保持不变 */
+            background: linear-gradient(90deg, #ffffff 0%, #c0ebff 35%, #ffffff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
     }
 
@@ -556,9 +741,10 @@ $font-family: "Microsoft YaHei", sans-serif;
             }
         }
 
-        .nav-buttons {
+        .nav-buttons__right {
             display: flex;
             gap: 10px;
+            flex-wrap: nowrap; /* 强制按钮组在一行显示，不换行 */
 
             .nav-btn {
                 background: rgba(13, 39, 66, 0.6);
@@ -570,9 +756,12 @@ $font-family: "Microsoft YaHei", sans-serif;
                 display: flex;
                 align-items: center;
                 gap: 6px;
+                /* --- 核心修改部分 --- */
+                white-space: nowrap;  /* 强制文字不换行 */
+                flex-shrink: 0;       /* 防止按钮被 flex 容器挤压变形 */
+                /* -------------------- */
 
-                &.active,
-                &:hover {
+                &.active{
                     background: rgba(0, 150, 255, 0.3);
                     border-color: $text-secondary;
                     color: #fff;
@@ -941,6 +1130,11 @@ $font-family: "Microsoft YaHei", sans-serif;
             height: 100%;
         }
 
+        //进度条样式
+        ::v-deep .bf-loading .bf-loading-gif{
+            background-image: url("https://mccsbc.obs.cn-east-3.myhuaweicloud.com/image/user/bim/logo.gif") !important;
+        }
+
         //构建详情
         ::v-deep .gld-bf-tree:before {
             content: "\e601";
@@ -1108,6 +1302,10 @@ $font-family: "Microsoft YaHei", sans-serif;
     justify-content: center;
     align-items: flex-end;
     padding-bottom: 0;
+
+    @media  screen and (max-width: 1800px){
+        display: none;
+    }
 
     .footer-tabs {
         display: flex;
