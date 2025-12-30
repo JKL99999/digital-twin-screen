@@ -74,6 +74,25 @@ export const constantRoutes = [
         ],
     },
 
+    {
+        path: "/backend",
+        component: () => import("@/views/management/Backend.vue"),
+        redirect: "/backend/pileledger",
+        children: [
+            {
+                path: "pileledger",
+                name: "Pileledger",
+                component: () => import("@/views/management/PileInfoManagement.vue"),
+            },
+            {
+                path: "projectInfo",
+                name: "ProjectInfo",
+                component: () => import("@/views/management/ProjectInfo.vue"),
+            },
+            // ... 其他子路由
+        ],
+    },
+
     // 404 page must be placed at the end !!!
     { path: "*", redirect: "/404", hidden: true },
 ]

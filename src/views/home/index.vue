@@ -15,10 +15,10 @@
                 </div>
                 <div class="header-right">
                     <span class="update-time">数据更新于: {{ updateTime }}</span>
-                    <div class="icon-btn">
+                    <div class="icon-btn" @click="goBackend">
                         <img src="@/assets/img/laptop.png" alt="" />
                     </div>
-                    <div class="icon-btn">
+                    <div class="icon-btn" @click="goPersonal">
                         <img src="@/assets/img/people.png" alt="" />
                     </div>
                     <button class="exit-btn" @click="exitBtn">退出</button>
@@ -181,12 +181,18 @@
                 <div class="footer-tab" :class="{ active: activeFooterIndex === 5 }" @click="setActiveTab(5)" />
             </div>
         </div>
+        <!-- 桩基详细信息弹窗 -->
+        <pile-detail-dialog :visible.sync="dialogVisible" :pile-id="currentPileId" />
     </div>
 </template>
 
 <script>
+import PileDetailDialog from "@/components/Dialog/PileDetailDialog.vue"
 export default {
     name: "Home",
+    components: {
+        PileDetailDialog,
+    },
     data() {
         return {
             currentTime: "", // 新增：用于存放实时时间字符串
@@ -232,6 +238,10 @@ export default {
             modelId: "10000776931924",
             modelId_2: "10000955511347",
             modelId_3: "10000776931926",
+
+            //弹窗信息
+            dialogVisible: false,
+            currentPileId: "",
         }
     },
     // 新增：组件挂载后启动定时器
@@ -246,6 +256,14 @@ export default {
         }
     },
     methods: {
+        // 到后台页面
+        goBackend() {
+            this.$router.push("/backend")
+        },
+        // 到个人页面
+        goPersonal() {
+            this.$router.push("/personal")
+        },
         // 退出系统
         exitBtn() {
             this.$router.push("/login")
@@ -309,7 +327,7 @@ export default {
             // cc78628cd1fb4aa1a5dc3130e671b2a7 58713f304f5a4812a81019405421ba41
             this.viewer3D.loadModel({
                 // 待加载模型的浏览凭证
-                viewToken: "58713f304f5a4812a81019405421ba41",
+                viewToken: "b6d6a7aef8bd4ae198202cdf9ddbbdad",
                 // 自定义模型ID，默认为文件ID
                 modelId: this.modelId_2,
             })
@@ -339,7 +357,7 @@ export default {
             }
             this.viewer3D.loadModel({
                 // 待加载模型的浏览凭证
-                viewToken: "58713f304f5a4812a81019405421ba41",
+                viewToken: "b6d6a7aef8bd4ae198202cdf9ddbbdad",
                 // 自定义模型ID，默认为文件ID
                 modelId: this.modelId_3,
             })
@@ -359,7 +377,7 @@ export default {
             try {
                 // await this.loadBimfaceSdk()
                 // 若未传入 viewToken，使用示例 Token（仅演示）
-                this.localViewToken = this.viewToken || "b904bcdfb732426db62423dfd7a91c1a"
+                this.localViewToken = this.viewToken || "7185d5b6d0854290aa6d3979b61c64c5"
                 const loaderConfig = new window.BimfaceSDKLoaderConfig()
                 loaderConfig.viewToken = this.localViewToken
                 window.BimfaceSDKLoader.load(loaderConfig, this.successCallback, this.failureCallback)
@@ -372,6 +390,17 @@ export default {
         onAdded() {
             this.model3D = this.viewer3D.getModel()
             this.viewer3D.render()
+        },
+
+        getData(data) {
+            //获取构件属性
+            console.log(data, "我被点击了")
+            if (data.objectType === "Component") {
+                this.dialogVisible = true
+                this.currentPileId = data.elementId
+                // alert(data.elementId)
+                // alert(JSON.stringify(data))
+            }
         },
 
         changeBackground() {
@@ -473,6 +502,10 @@ export default {
                     this.isCModelAdded = true
                     }
                 });
+            // 添加鼠标点击事件
+            this.viewer3D.addEventListener(Glodon.Bimface.Viewer.Viewer3DEvent.MouseClicked, 
+                this.getData
+            )
             console.log(this.viewer3D, "查看信息2")
         },
         // 失败回调
@@ -660,6 +693,11 @@ $font-family: "Microsoft YaHei", sans-serif;
             background-clip: text;
             color: transparent;
         }
+    }
+    .icon-btn {
+        background: transparent;
+        border: none;
+        cursor: pointer;
     }
 
     .exit-btn {
