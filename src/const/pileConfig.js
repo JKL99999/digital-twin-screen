@@ -1,0 +1,66 @@
+// 1. 施工信息映射
+export const CONSTRUCTION_FIELD_MAP = [
+    { prop: "workArea", label: "工区" },
+    { prop: "pileType", label: "桩基类型" },
+    { prop: "pileNumber", label: "关联桩号" },
+    { prop: "pileDiameter", label: "桩径", unit: "mm" },
+    { prop: "overlapLength", label: "搭接长度", unit: "mm" },
+    { prop: "designLength", label: "桩长", unit: "m" },
+    { prop: "spacing", label: "间距", unit: "mm" },
+    { prop: "pileTopElevation", label: "桩顶标高", unit: "m" },
+    { prop: "designVolume", label: "设计方量", unit: "m³" },
+    { prop: "cementType", label: "水泥品种" },
+    { prop: "designCementDosage", label: "设计水泥掺量" },
+    { prop: "designWaterCementRatio", label: "设计水灰比" },
+    { prop: "pilePartition", label: "桩基分区" },
+    { prop: "constructionDate", label: "施工时间" },
+    { prop: "constructionStatus", label: "施工状态" },
+    { prop: "constructionTeam", label: "施工队伍" },
+    { prop: "startTime", label: "开钻时间" },
+    { prop: "verticality", label: "竖直度", unit: "%" },
+    { prop: "drillingDepth", label: "钻入深度", unit: "m" },
+    { prop: "designDrillingSpeed", label: "下钻速度", unit: "m/min" },
+    { prop: "liftingTime", label: "提升时间" },
+    { prop: "designLiftingSpeed", label: "提升速度", unit: "m/min" },
+    { prop: "actualWaterCementRatio", label: "实际水灰比" },
+    { prop: "groutingPressure", label: "喷浆压力", unit: "MPa" },
+    { prop: "endTime", label: "结束时间" },
+    { prop: "concreteVolume", label: "单桩喷浆量", unit: "m³" },
+    { prop: "slurrySpecificGravity", label: "水泥浆比重" },
+    { prop: "drillingMachine", label: "施工机械" },
+]
+
+// 2. 自检信息映射 (qualityTest)
+export const SELF_CHECK_FIELD_MAP = [
+    { prop: "engineeringPart", label: "工程部位" },
+    { prop: "representativeQuantity", label: "代表数量" },
+    { prop: "sampleSpec", label: "样品规格" },
+    { prop: "testItem", label: "检测项目" },
+    { prop: "strengthGrade", label: "强度等级" },
+    { prop: "commissionGroupNum", label: "委托组数" },
+    { prop: "moldingDate", label: "成型日期" },
+    { prop: "commissionDate", label: "委托日期" },
+    { prop: "selfCheckReportDate", label: "自检报告日期" },
+    { prop: "selfCheckReportCode", label: "自检报告编号" },
+    { prop: "result28d", label: "28d结果" }, // 注意：数据库是 result_28d，后端转驼峰通常是 result28d
+    { prop: "mudDensity", label: "泥浆比重" },
+    { prop: "sedimentThickness", label: "沉渣厚度", unit: "mm" },
+    { prop: "verticalityDeviation", label: "垂直度偏差", unit: "%" },
+    { prop: "holeDepth", label: "实测孔深", unit: "m" },
+    { prop: "poreDiameter", label: "实测孔径", unit: "mm" },
+    { prop: "testResult", label: "自检结论" },
+    { prop: "testerName", label: "检测人" },
+]
+
+// 3. 三检信息映射 (thirdPartyTest)
+export const THIRD_CHECK_FIELD_MAP = [
+    { prop: "engineeringPart", label: "工程部位" },
+    { prop: "representativeQuantity", label: "代表数量" },
+    { prop: "sampleSpec", label: "样品规格" },
+    { prop: "testItem", label: "检测项目" },
+    { prop: "strengthGrade", label: "强度等级" },
+    { prop: "commissionGroupNum", label: "委托组数" },
+    { prop: "thirdPartyReportDate", label: "三检报告日期" },
+    { prop: "thirdPartyReportCode", label: "三检报告编号" },
+    { prop: "result28d", label: "28d结果" },
+]

@@ -1,6 +1,5 @@
 # just a flag
-NODE_ENV = 'production'
+NODE_ENV = 'huawei'
 
 # base api
 VUE_APP_BASE_API = 'http://1.94.21.164:8003'
-

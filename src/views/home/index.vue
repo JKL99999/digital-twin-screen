@@ -69,8 +69,20 @@
             <div class="main_content_left">
                 <!-- Section 1: Progress Stats -->
                 <div class="panel-box progress-section">
-                    <div class="panel-header">施工进度统计</div>
-                    <div class="date-range"><span>📅 开始日期</span> 至 <span>结束日期</span></div>
+                    <div class="panel-header">
+                        <img src="@/assets/img/statistics.png" alt="" class="header-img" />
+                        <span class="header-title">施工进度统计</span>
+                    </div>
+                    <div class="date-range">
+                        <el-date-picker
+                            v-model="rangeDate"
+                            type="daterange"
+                            range-separator="至"
+                            start-placeholder="开始日期"
+                            end-placeholder="结束日期"
+                        >
+                        </el-date-picker>
+                    </div>
 
                     <div class="progress-container">
                         <!-- Left: Donut Chart -->
@@ -187,6 +199,8 @@
 </template>
 
 <script>
+import { getViewToken } from "@/service/model.js"
+import { getInfoByPileNumber, getAllCompletedPiles, getFinishedThisMonth, getFinishedThisWeek } from "@/service/pile.js"
 import PileDetailDialog from "@/components/Dialog/PileDetailDialog.vue"
 export default {
     name: "Home",
@@ -225,15 +239,28 @@ export default {
             app: null,
             model3D: null,
             // 若未传入，将在 mounted 中设置演示 Token
-            localViewToken: "",
+            // 基础模型 Token
+            baseModelViewToken: "",
+            // 基础模型 ID
+            baseModelId: "2008461429430026241",
+            // 图纸模型 Token
+            dwgModelViewToken: "",
+            // 图纸模型 ID
+            dwgModelId: "2008738724321488897",
 
             //桩基编号
             pileNumber: null,
+            //映射的构件编号
+            selectedElementId: null,
 
             //缩放到定位构件的列表
             searchComponents: [],
             isBModelAdded: false,
             isCModelAdded: false,
+            //着色的构件列表
+            overridedElementIds: [],
+
+            //模型ID
 
             modelId: "10000776931924",
             modelId_2: "10000955511347",
@@ -242,12 +269,22 @@ export default {
             //弹窗信息
             dialogVisible: false,
             currentPileId: "",
+
+            //桩号信息
+
+            toBeRenderElementIds: [],
+            //大屏搜索时间范围
+            rangeDate: null,
         }
     },
+    //vue声明周期钩子函数
+    created() {
+        this.getBaseViewToken()
+    },
+
     // 新增：组件挂载后启动定时器
     mounted() {
         this.startClock()
-        this.initBimface()
     },
     // 新增：组件销毁前清除定时器，防止内存泄漏
     beforeDestroy() {
@@ -256,6 +293,76 @@ export default {
         }
     },
     methods: {
+        //获取模型的viewToken
+        async getBaseViewToken() {
+            try {
+                const infoBase = await getViewToken(this.baseModelId)
+                this.baseModelViewToken = infoBase.data.viewToken
+
+                const infoDwg = await getViewToken(this.dwgModelId)
+                this.dwgModelViewToken = infoDwg.data.viewToken
+
+                this.initBimface()
+            } catch (error) {
+                console.error("获取 viewToken 失败：", error)
+            }
+        },
+        //根据桩号获取构件信息
+        async getInfoByPileNumber(pileNumber) {
+            try {
+                const res = await getInfoByPileNumber(pileNumber)
+                this.selectedElementId = res.data.item.elementId
+                this.zoomToComponents(this.selectedElementId)
+                this.toBeRenderElementIds = [this.selectedElementId]
+                this.changeColor(this.toBeRenderElementIds)
+            } catch {
+                console.error("获取构件信息失败")
+            }
+        },
+
+        // 获取开累完成的构件集合
+        async getAllCompletedPiles() {
+            try {
+                const res = await getAllCompletedPiles()
+                this.overridedElementIds = res.data.list
+                this.changeColor(this.overridedElementIds)
+            } catch {
+                console.error("获取构件信息失败")
+            }
+        },
+
+        async getFinishedThisMonth() {
+            try {
+                const res = await getFinishedThisMonth()
+                this.overridedElementIds = res.data.list
+                this.changeColor(this.overridedElementIds)
+            } catch {
+                console.error("获取构件信息失败")
+            }
+        },
+
+        async getFinishedThisWeek() {
+            try {
+                const res = await getFinishedThisWeek()
+                this.overridedElementIds = res.data.list
+                this.changeColor(this.overridedElementIds)
+            } catch {
+                console.error("获取构件信息失败")
+            }
+        },
+
+        // 修改构件的颜色
+        changeColor(ids) {
+            //首先清除所有构件的颜色到初始状态
+            this.model3D.clearOverrideColorComponents()
+            // 设定一个颜色和透明度
+            const Color = window.Glodon.Web.Graphics.Color
+            const color = new Color("#EE799F", 1.0)
+
+            this.model3D.overrideComponentsColorById(ids, color)
+            this.viewer3D.render()
+        },
+
         // 到后台页面
         goBackend() {
             this.$router.push("/backend")
@@ -271,13 +378,24 @@ export default {
 
         //桩号搜索
         searchPile() {
-            this.zoomToComponents(this.pileNumber)
+            this.getInfoByPileNumber(this.pileNumber)
         },
         setActiveTab(num) {
             this.activeFooterIndex = num
         },
+        // 左侧按钮切换,开累完成、本月完成、本周完成
         setActiveLeftBtn(num) {
             this.activeLeftBtnIndex = num
+            if (num === 0) {
+                this.rangeDate = null
+                this.getAllCompletedPiles()
+            } else if (num === 1) {
+                this.rangeDate = null
+                this.getFinishedThisMonth()
+            } else if (num === 2) {
+                this.rangeDate = null
+                this.getFinishedThisWeek()
+            }
         },
         // 新增：启动时钟的方法
         startClock() {
@@ -324,10 +442,10 @@ export default {
             if (this.isBModelAdded) {
                 return
             }
-            // cc78628cd1fb4aa1a5dc3130e671b2a7 58713f304f5a4812a81019405421ba41
+            // cc78628cd1fb4aa1a5dc3130e671b2a7 58713f304f5a4812a81019405421ba41 e752d8642acb456783d188e248573997
             this.viewer3D.loadModel({
                 // 待加载模型的浏览凭证
-                viewToken: "b6d6a7aef8bd4ae198202cdf9ddbbdad",
+                viewToken: this.dwgModelViewToken || "084e6c20777e438a912b8607ea340256",
                 // 自定义模型ID，默认为文件ID
                 modelId: this.modelId_2,
             })
@@ -357,7 +475,7 @@ export default {
             }
             this.viewer3D.loadModel({
                 // 待加载模型的浏览凭证
-                viewToken: "b6d6a7aef8bd4ae198202cdf9ddbbdad",
+                viewToken: "0c110455343242ebae2dc3c2b3389a13",
                 // 自定义模型ID，默认为文件ID
                 modelId: this.modelId_3,
             })
@@ -377,9 +495,9 @@ export default {
             try {
                 // await this.loadBimfaceSdk()
                 // 若未传入 viewToken，使用示例 Token（仅演示）
-                this.localViewToken = this.viewToken || "7185d5b6d0854290aa6d3979b61c64c5"
+                console.log(this.baseModelViewToken, "查看信息3")
                 const loaderConfig = new window.BimfaceSDKLoaderConfig()
-                loaderConfig.viewToken = this.localViewToken
+                loaderConfig.viewToken = this.baseModelViewToken
                 window.BimfaceSDKLoader.load(loaderConfig, this.successCallback, this.failureCallback)
             } catch (e) {
                 // eslint-disable-next-line no-console
@@ -443,7 +561,7 @@ export default {
             webAppConfig.enableViewHouse = false
             webAppConfig.globalUnit = window.Glodon.Bimface.Common.Units.LengthUnits.Millimeter
             this.app = new window.Glodon.Bimface.Application.WebApplication3D(webAppConfig)
-            this.app.addView(this.localViewToken)
+            this.app.addView(this.baseModelViewToken)
             this.viewer3D = this.app.getViewer()
             // this.viewer3D.addEventListener(window.Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, this.onAdded)
             // // 初始化页面展示效果
@@ -484,7 +602,8 @@ export default {
                     let model3D = this.viewer3D.getModel(this.modelId_2);
                     if(model3D){
                     // 平移模型
-                    model3D.setModelTranslation({ x: 40000, y: 0, z: 0 });
+                    model3D.setModelTranslation({ x: 0, y: 0, z: 150000 });
+                    model3D.setModelScale({ x: 0, y: 0, z: 0 }, 0.0394);
                     this.isBModelAdded = true
                     }
                     
@@ -516,6 +635,7 @@ export default {
 
         //操作模型的方法
          zoomToComponents(pileNumber) {
+            this.searchComponents = []
             this.searchComponents.push(pileNumber)
             this.viewer3D.getModel().clearSelectedComponents()
             this.viewer3D.getModel().setSelectedComponentsById(this.searchComponents)
@@ -552,95 +672,14 @@ $font-family: "Microsoft YaHei", sans-serif;
     // background: radial-gradient(91% 91% at 89% 132%, rgba(23, 159, 222, 0.2) 0%, rgba(23, 159, 222, 0) 100%),
     //     radial-gradient(51% 51% at 28% 96%, rgba(23, 159, 222, 0.2) 0%, rgba(23, 159, 222, 0) 100%), #0e1a2a;
     background-image: url("~@/assets/img/background.png");
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
     color: $text-primary;
     font-family: $font-family;
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
-
-/* --- Header --- */
-// .header {
-//     height: 110px;
-//     width: 100%;
-//     display: flex;
-//     justify-content: space-between;
-//     align-items: center;
-//     background-image: url("~@/assets/img/headerBg.png");
-//     position: relative;
-//     box-shadow: 0 0 20px rgba(0, 150, 255, 0.2);
-//     z-index: 10;
-
-//     .header-content {
-//         display: flex;
-//         width: 100%;
-//         justify-content: space-between;
-//         align-items: flex-start;
-//         padding: 0 20px;
-//         margin-top: 10px;
-//     }
-
-//     .header-left,
-//     .header-right {
-//         display: flex;
-//         align-items: center;
-//         font-size: 14px;
-//         color: #a0cfff;
-//     }
-//     .header-left {
-//         gap: 10px;
-//     }
-//     .header-right {
-//         .icon-btn {
-//             margin-left: 34px;
-//             background: transparent;
-//             border: none;
-//             cursor: pointer;
-//         }
-//         .exit-btn {
-//             margin-left: 34px;
-//         }
-//     }
-
-//     .header-center {
-//         text-align: center;
-//         position: absolute;
-//         flex-shrink: 1;
-//         left: 50%;
-//         transform: translateX(-50%);
-//         top: 20px;
-
-//         .title {
-//             font-family: Source Han Sans CN, Source Han Sans CN;
-//             font-weight: 800;
-//             font-size: 32px;
-//             line-height: 40px;
-//             text-shadow: 0px 2px 4px rgba(14, 26, 42, 0.4);
-//             text-align: center;
-//             font-style: normal;
-//             text-transform: none;
-
-//             /* --- 关键修改部分 --- */
-//             background: linear-gradient(90deg, #ffffff 0%, #c0ebff 35%, #ffffff 0%);
-//             -webkit-background-clip: text; /* 将背景裁剪到文字上 */
-//             background-clip: text; /* 标准写法 */
-//             color: transparent; /* 必须让文字颜色透明，才能看到底下的背景渐变 */
-//             /* -------------------- */
-//         }
-//     }
-
-//     .exit-btn {
-//         background: transparent;
-//         border: 1px solid #a0cfff;
-//         color: #a0cfff;
-//         padding: 4px 12px;
-//         border-radius: 4px;
-//         cursor: pointer;
-//         &:hover {
-//             background: rgba(255, 255, 255, 0.1);
-//         }
-//     }
-// }
 
 .header {
     height: 110px;
@@ -746,9 +785,9 @@ $font-family: "Microsoft YaHei", sans-serif;
     .nav-buttons {
         display: flex;
         align-items: center;
-        justify-content: left;
+        justify-content: space-between;
+        flex: 1;
         margin-left: 7px;
-        gap: 400px;
 
         .search-bar {
             display: flex;
@@ -819,6 +858,7 @@ $font-family: "Microsoft YaHei", sans-serif;
 
     /* Left Panel */
     .main_content_left {
+        margin-top: 20px;
         width: 530px;
         display: flex;
         flex-direction: column;
@@ -845,27 +885,65 @@ $font-family: "Microsoft YaHei", sans-serif;
             }
 
             .panel-header {
-                font-size: 16px;
-                color: $text-secondary;
-                border-bottom: 2px solid rgba(43, 118, 154, 0.5);
-                padding-bottom: 8px;
-                margin-bottom: 10px;
-                font-weight: bold;
-                text-shadow: 0 0 5px $text-secondary;
+                position: absolute;
+                top: -24px; /* 根据图片实际高度调整，让其骑在边框上 */
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 10;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+
+                .header-img {
+                    height: 44px; /* 根据实际图片大小调整 */
+                    width: auto;
+                    display: block;
+                }
+
+                .header-title {
+                    position: absolute;
+                    color: #fff;
+                    font-weight: bold;
+                    font-size: 16px;
+                    letter-spacing: 1px;
+                    text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+                    top: 45%; /* 微调垂直居中 */
+                    transform: translateY(-50%);
+                }
             }
         }
 
         /* Progress Section */
         .progress-section {
             .date-range {
-                font-size: 12px;
-                color: #8ab;
-                margin-bottom: 10px;
-                background: rgba(0, 0, 0, 0.2);
-                padding: 4px;
+                margin: 15px auto 10px;
+                width: 304px;
+                height: 32px;
+                background: rgba(245, 252, 255, 0.1);
                 border-radius: 4px;
-                text-align: center;
-                border: 1px solid rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(192, 235, 255, 0.4);
+                display: flex;
+                align-items: center;
+
+                ::v-deep .el-date-editor {
+                    width: 100%;
+                    height: 100%;
+                    background: transparent;
+                    border: none;
+                    padding: 0 10px;
+
+                    .el-range-input {
+                        background: transparent;
+                        color: #fff;
+                    }
+                    .el-range-separator {
+                        color: #fff;
+                        line-height: 30px;
+                    }
+                    .el-input__icon {
+                        line-height: 30px;
+                    }
+                }
             }
 
             .progress-container {
@@ -1334,8 +1412,13 @@ $font-family: "Microsoft YaHei", sans-serif;
 
 /* --- Footer --- */
 .footer {
-    height: 100px;
+    /* 设定基准字体大小：1920px 宽时 1em = 100px，实现基于屏幕宽度的自适应 */
+    font-size: calc(100vw / 19.2);
+    height: 1em;
     background-image: url("~@/assets/img/footerBg.png");
+    background-position: center bottom;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
     display: flex;
     justify-content: center;
     align-items: flex-end;
@@ -1350,15 +1433,18 @@ $font-family: "Microsoft YaHei", sans-serif;
         align-items: flex-end;
         gap: 10px;
 
+        .footer-tab {
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 100% 100%;
+        }
+
         /* 为每个 tab 单独设置图片 */
         .footer-tab:nth-child(1) {
             //基础样式
-            width: 219px;
-            height: 75px;
+            width: 2.19em;
+            height: 0.75em;
             cursor: pointer;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: contain; /* 或 cover，根据需求调整 */
             /* 设置默认状态的背景图片 */
             background-image: url("~@/assets/img/footer_btn01.png");
 
@@ -1370,8 +1456,8 @@ $font-family: "Microsoft YaHei", sans-serif;
         }
         .footer-tab:nth-child(2) {
             //基础样2
-            width: 219px;
-            height: 82px;
+            width: 2.19em;
+            height: 0.82em;
             cursor: pointer;
             /* 设置默认状态的背景图片 */
             background-image: url("~@/assets/img/footer_btn02.png");
@@ -1384,8 +1470,8 @@ $font-family: "Microsoft YaHei", sans-serif;
         }
         .footer-tab:nth-child(3) {
             //基础样式
-            width: 219px;
-            height: 89px;
+            width: 2.19em;
+            height: 0.89em;
             cursor: pointer;
             /* 设置默认状态的背景图片 */
             background-image: url("~@/assets/img/footer_btn03.png");
@@ -1398,8 +1484,8 @@ $font-family: "Microsoft YaHei", sans-serif;
         }
         .footer-tab:nth-child(4) {
             //基础样式
-            width: 219px;
-            height: 89px;
+            width: 2.19em;
+            height: 0.89em;
             cursor: pointer;
             /* 设置默认状态的背景图片 */
             background-image: url("~@/assets/img/footer_btn04.png");
@@ -1412,8 +1498,8 @@ $font-family: "Microsoft YaHei", sans-serif;
         }
         .footer-tab:nth-child(5) {
             //基础样式
-            width: 219px;
-            height: 82px;
+            width: 2.19em;
+            height: 0.82em;
             cursor: pointer;
             /* 设置默认状态的背景图片 */
             background-image: url("~@/assets/img/footer_btn05.png");
@@ -1426,8 +1512,8 @@ $font-family: "Microsoft YaHei", sans-serif;
         }
         .footer-tab:nth-child(6) {
             //基础样式
-            width: 219px;
-            height: 75px;
+            width: 2.19em;
+            height: 0.75em;
             cursor: pointer;
             /* 设置默认状态的背景图片 */
             background-image: url("~@/assets/img/footer_btn06.png");

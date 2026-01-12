@@ -1,94 +1,107 @@
 <template>
     <el-dialog
-        title="桩基详细参数"
         :visible.sync="localVisible"
-        width="1000px"
+        :show-close="false"
+        width="1104px"
         custom-class="pile-detail-dialog"
         :before-close="handleClose"
         :append-to-body="true"
-        top="5vh"
     >
-        <div class="detail-header">
-            <div class="left-info">
-                <span class="pile-code">{{ pileId || "GTLZ-XXX" }}</span>
-                <el-tag effect="dark" type="success" size="small" class="status-tag">已完成</el-tag>
-            </div>
-            <div class="right-search">
-                <el-input
-                    v-model="searchKeyword"
-                    placeholder="请输入桩基编号搜索"
-                    size="small"
-                    suffix-icon="el-icon-search"
-                    class="custom-input"
-                ></el-input>
-            </div>
+        <div class="custom-header-wrapper">
+            <img src="@/assets/img/top-center.png" alt="" class="header-img" />
+            <span class="header-title">桩基详细参数</span>
         </div>
 
-        <div class="dialog-content-scroll">
-            <div class="section-block">
-                <div class="section-title"><span class="num-box">1</span> 施工信息</div>
-                <el-row class="info-grid">
-                    <el-col :span="8" v-for="(item, index) in constructionData" :key="'c' + index">
-                        <div class="info-item">
-                            <span class="label">{{ item.label }}</span>
-                            <span class="value">{{ item.value }}</span>
-                        </div>
-                    </el-col>
-                </el-row>
+        <div class="detail-content-wrapper">
+            <div class="detail-header">
+                <div class="left-info">
+                    <span class="pile-code">{{ selectedPileNumber || "GTLZ-286" }}</span>
+                    <el-tag v-if="constructStatus === 1" effect="dark" type="success" size="small" class="status-tag"
+                        >已完成</el-tag
+                    >
+                    <el-tag v-else effect="dark" type="warning" size="small" class="status-tag">未完成</el-tag>
+                </div>
+                <div class="right-search">
+                    <el-input
+                        v-model="searchKeyword"
+                        placeholder="请输入桩基编号搜索"
+                        size="small"
+                        class="custom-input"
+                        clearable
+                        @keyup.enter.native="handleSearch"
+                    ></el-input>
+                </div>
             </div>
 
-            <div class="section-block">
-                <div class="section-title"><span class="num-box">2</span> 试验信息 (自检)</div>
-                <el-row class="info-grid">
-                    <el-col :span="8" v-for="(item, index) in selfCheckData" :key="'s' + index">
-                        <div class="info-item">
-                            <span class="label">{{ item.label }}</span>
-                            <span class="value">{{ item.value }}</span>
-                        </div>
-                    </el-col>
-                </el-row>
-            </div>
+            <div class="detail-body">
+                <div class="left-part">
+                    <div class="section-block">
+                        <div class="section-title"><span class="num-box">1</span> 施工信息</div>
+                        <el-row class="info-grid">
+                            <el-col :span="8" v-for="(item, index) in constructionData" :key="'c' + index">
+                                <div class="info-item">
+                                    <span class="label" :title="item.label">{{ item.label }}</span>
+                                    <span class="value" :title="item.value">{{ item.value }}</span>
+                                </div>
+                            </el-col>
+                        </el-row>
+                    </div>
 
-            <div class="section-block">
-                <div class="section-title"><span class="num-box">3</span> 试验信息 (三检)</div>
-                <el-row class="info-grid">
-                    <el-col :span="8" v-for="(item, index) in thirdCheckData" :key="'t' + index">
-                        <div class="info-item">
-                            <span class="label">{{ item.label }}</span>
-                            <span class="value">{{ item.value }}</span>
-                        </div>
-                    </el-col>
-                </el-row>
-            </div>
-
-            <div class="section-block">
-                <div class="section-title"><span class="num-box">4</span> 现场验收信息</div>
-                <div class="single-text-row">验收时间：{{ acceptanceTime }}</div>
-            </div>
-
-            <div class="section-block">
-                <div class="section-title">
-                    <span class="num-box">5</span> 挂接附件信息 (图片/视频/文件等超链接) 可实现点击查阅
+                    <div class="section-block">
+                        <div class="section-title"><span class="num-box">2</span> 试验信息 (自检)</div>
+                        <el-row class="info-grid">
+                            <el-col :span="8" v-for="(item, index) in selfCheckData" :key="'s' + index">
+                                <div class="info-item">
+                                    <span class="label" :title="item.label">{{ item.label }}</span>
+                                    <span class="value" :title="item.value">{{ item.value }}</span>
+                                </div>
+                            </el-col>
+                        </el-row>
+                    </div>
                 </div>
 
-                <div class="attachment-list">
-                    <div class="attach-row">
-                        <i class="el-icon-picture-outline icon-blue"></i>
-                        <span class="attach-label">图片：过程照片-数字化设备提供、验收照片等</span>
-                        <a href="#" class="link-text">www.xxx.com</a>
+                <div class="right-part">
+                    <div class="section-block">
+                        <div class="section-title"><span class="num-box">3</span> 试验信息 (三检)</div>
+                        <el-row class="info-grid">
+                            <el-col :span="8" v-for="(item, index) in thirdCheckData" :key="'t' + index">
+                                <div class="info-item">
+                                    <span class="label" :title="item.label">{{ item.label }}</span>
+                                    <span class="value" :title="item.value">{{ item.value }}</span>
+                                </div>
+                            </el-col>
+                        </el-row>
                     </div>
-                    <div class="attach-row">
-                        <i class="el-icon-video-camera icon-blue"></i>
-                        <span class="attach-label">视频：数字化设备提供</span>
-                        <a href="#" class="link-text">www.xxx.com</a>
+
+                    <div class="section-block">
+                        <div class="section-title"><span class="num-box">4</span> 现场验收信息</div>
+                        <div class="single-text-row">验收时间：{{ acceptanceTime }}</div>
                     </div>
-                    <div class="attach-row" style="align-items: flex-start">
-                        <i class="el-icon-document icon-blue" style="margin-top: 2px"></i>
-                        <span class="attach-label">文件：自检报告</span>
-                        <div class="multi-links">
-                            <a href="#" class="link-text">www.xxx.com</a>
-                            <a href="#" class="link-text">三检报告</a>
-                            <a href="#" class="link-text">www.xxx.com</a>
+
+                    <div class="section-block">
+                        <div class="section-title">
+                            <span class="num-box">5</span> 挂接附件信息 (图片/视频/文件等超链接)
+                        </div>
+
+                        <div class="attachment-list">
+                            <div class="attach-row">
+                                <i class="el-icon-picture-outline icon-blue"></i>
+                                <span class="attach-label">图片：过程照片...</span>
+                                <a href="#" class="link-text">www.xxx.com</a>
+                            </div>
+                            <div class="attach-row">
+                                <i class="el-icon-video-camera icon-blue"></i>
+                                <span class="attach-label">视频：数字化设备...</span>
+                                <a href="#" class="link-text">www.xxx.com</a>
+                            </div>
+                            <div class="attach-row" style="align-items: flex-start">
+                                <i class="el-icon-document icon-blue" style="margin-top: 2px"></i>
+                                <span class="attach-label">文件：自检报告</span>
+                                <div class="multi-links">
+                                    <a href="#" class="link-text">www.xxx.com</a>
+                                    <a href="#" class="link-text">三检报告</a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -98,77 +111,47 @@
 </template>
 
 <script>
+import { getInfoByPileNumber } from "@/service/pile.js"
+import { getPileInfoByElementId } from "@/service/pileMapping.js"
+// 引入所有配置
+import { CONSTRUCTION_FIELD_MAP, SELF_CHECK_FIELD_MAP, THIRD_CHECK_FIELD_MAP } from "@/const/pileConfig.js"
+// 通用映射处理函数（纯逻辑，不依赖组件实例）
+const mapDataToFields = (dataObj, configMap) => {
+    const source = dataObj || {}
+    return configMap.map(field => {
+        let val = source[field.prop]
+
+        // 空值处理
+        if (val === null || val === undefined || val === "") {
+            val = "-"
+        }
+        // 单位拼接
+        else if (field.unit) {
+            val = `${val}${field.unit}`
+        }
+
+        return { label: field.label, value: val }
+    })
+}
 export default {
     name: "PileDetailDialog",
     props: {
-        visible: {
-            type: Boolean,
-            default: false,
-        },
-        pileId: {
-            type: String,
-            default: "",
-        },
+        visible: { type: Boolean, default: false },
+        pileId: { type: String, default: "" },
     },
     data() {
         return {
+            pileNmuber: "",
             searchKeyword: "",
             acceptanceTime: "2025年5月23日",
-            // 下面是模拟数据，您需要在 fetchData 中替换为接口返回的数据
-            constructionData: [
-                { label: "工区", value: "设计水泥" },
-                { label: "桩基类型", value: "设计水泥" },
-                { label: "桩基编号", value: "设计水泥" },
-                { label: "桩径-搭接", value: "设计水泥" },
-                { label: "桩长", value: "设计水泥" },
-                { label: "间距", value: "设计水泥" },
-                { label: "桩顶标高", value: "设计水泥" },
-                { label: "设计方量", value: "设计水泥" },
-                { label: "水泥", value: "设计水泥" },
-                { label: "设计水泥掺量", value: "设计水泥" },
-                { label: "设计水灰比", value: "设计水泥" },
-                { label: "桩基分区/检验批分区", value: "设计水泥" },
-                { label: "施工时间", value: "设计水泥" },
-                { label: "施工状态", value: "设计水泥" },
-                { label: "施工队伍", value: "设计水泥" },
-                { label: "开始时间", value: "设计水泥" },
-                { label: "垂直度", value: "设计水泥" },
-                { label: "钻入深度", value: "设计水泥" },
-                { label: "下钻速度", value: "设计水泥" },
-                { label: "提升时间", value: "设计水泥" },
-                { label: "提升速度", value: "设计水泥" },
-                { label: "设计水灰比", value: "设计水泥" },
-                { label: "实际水灰比", value: "设计水泥" },
-                { label: "喷浆压力", value: "设计水泥" },
-                { label: "结束时间", value: "设计水泥" },
-                { label: "单桩喷浆量", value: "设计水泥" },
-                { label: "水泥浆比重", value: "设计水泥" },
-                { label: "施工机械", value: "设计水泥" },
-            ],
-            selfCheckData: [
-                { label: "工程部位", value: "设计水泥" },
-                { label: "代表数量", value: "设计水泥" },
-                { label: "样品厚度", value: "设计水泥" },
-                { label: "检测项目", value: "设计水泥" },
-                { label: "强度等级", value: "设计水泥" },
-                { label: "委托组数", value: "设计水泥" },
-                { label: "成型日期", value: "设计水泥" },
-                { label: "委托日期", value: "设计水泥" },
-                { label: "自检报告日期", value: "设计水泥" },
-                { label: "自检报告编号", value: "设计水泥" },
-                { label: "28d结果", value: "设计水泥" },
-            ],
-            thirdCheckData: [
-                { label: "工程部位", value: "设计水泥" },
-                { label: "代表数量", value: "设计水泥" },
-                { label: "样品规格", value: "设计水泥" },
-                { label: "检测项目", value: "设计水泥" },
-                { label: "强度等级", value: "设计水泥" },
-                { label: "委托组数", value: "设计水泥" },
-                { label: "三检报告日期", value: "设计水泥" },
-                { label: "三检报告编号", value: "设计水泥" },
-                { label: "28d结果", value: "设计水泥" },
-            ],
+            // 数据保持不变...
+            constructionData: mapDataToFields({}, CONSTRUCTION_FIELD_MAP),
+            selfCheckData: mapDataToFields({}, SELF_CHECK_FIELD_MAP),
+            thirdCheckData: mapDataToFields({}, THIRD_CHECK_FIELD_MAP),
+
+            selectedPileNumber: null,
+            selectedElementId: null,
+            constructStatus: 0,
         }
     },
     computed: {
@@ -181,82 +164,146 @@ export default {
             },
         },
     },
-    watch: {
-        // 当弹窗打开或桩号变化时，请求接口
-        pileId(newVal) {
-            if (newVal && this.localVisible) {
-                this.fetchData()
-            }
-        },
-        visible(newVal) {
-            if (newVal) {
-                this.fetchData()
-            }
-        },
-    },
     methods: {
         handleClose() {
             this.localVisible = false
         },
-        fetchData() {
-            console.log("Fetching data for pile:", this.pileId)
-            // TODO: 在这里调用您的后端接口
-            // axios.get(`/api/pile/${this.pileId}`).then(res => { this.constructionData = res.data... })
+
+        async getPileInfoByElementId(elementId) {
+            try {
+                const res = await getPileInfoByElementId(elementId)
+                if (res && res.data && res.data.item) {
+                    const item = res.data.item
+                    this.selectedPileNumber = item.pileNumber
+                    this.constructStatus = item.constructStatus
+
+                    // 1. 处理施工信息 (constructRecord)
+                    this.constructionData = mapDataToFields(item.constructRecord, CONSTRUCTION_FIELD_MAP)
+
+                    // 2. 处理自检信息 (qualityTest)
+                    this.selfCheckData = mapDataToFields(item.qualityTest, SELF_CHECK_FIELD_MAP)
+
+                    // 3. 处理三检信息 (thirdPartyTest)
+                    this.thirdCheckData = mapDataToFields(item.thirdPartyTest, THIRD_CHECK_FIELD_MAP)
+                }
+            } catch (error) {
+                console.error("获取桩基详情失败", error)
+            }
+        },
+
+        handleSearch() {
+            this.getInfoByPileNumber(this.searchKeyword)
+        },
+
+        async getInfoByPileNumber(pileNumber) {
+            try {
+                const res = await getInfoByPileNumber(pileNumber)
+                if (res.data && res.data.item) {
+                    this.selectedElementId = res.data.item.elementId
+                    this.getPileInfoByElementId(this.selectedElementId)
+                }
+            } catch {
+                console.error("获取构件信息失败")
+            }
+        },
+    },
+    watch: {
+        pileId(val) {
+            if (val && this.visible) {
+                // 注意这里是用 this.visible 或 this.localVisible
+                this.getPileInfoByElementId(val)
+            }
         },
     },
 }
 </script>
 
 <style lang="scss" scoped>
-/* 定义变量，方便调整颜色 */
-$bg-color: rgba(4, 28, 52, 0.95);
 $border-color: #1c4c74;
 $text-blue: #00eaff;
 $text-white: #ffffff;
-$highlight-bg: rgba(0, 234, 255, 0.1);
 
-/* 深度选择器覆盖 Element UI 默认 Dialog 样式 */
+/* 深度选择器定制 Dialog */
 ::v-deep .pile-detail-dialog {
-    width: 1104px;
-    height: 517px;
     background: #0e1a2a;
     box-shadow: 0px 2px 8px 0px rgba(23, 159, 222, 0.4);
-    border-radius: 12px 12px 12px 12px;
+    border-radius: 12px;
     border: 1px solid #c0ebff;
 
-    .el-dialog__header {
-        background: linear-gradient(to bottom, #093457, #041c34);
-        border-bottom: 1px solid $border-color;
-        padding: 15px 20px;
+    /* === 核心修改：居中定位开始 === */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0 !important; /* 强制去除 Element UI 默认的 margin-top: 15vh */
+    /* === 核心修改：居中定位结束 === */
 
-        .el-dialog__title {
-            color: $text-white;
-            font-weight: bold;
-            letter-spacing: 1px;
-            text-shadow: 0 0 5px $text-blue;
-        }
-        .el-dialog__close {
-            color: $text-blue;
-            &:hover {
-                color: #fff;
-            }
-        }
+    overflow: visible; /* 允许头部图片溢出边界 */
+
+    /* 固定大小 */
+    width: 1104px !important;
+    height: 517px !important;
+
+    /* 隐藏 ElementUI 默认头部 */
+    .el-dialog__header {
+        display: none;
     }
 
+    /* 调整 Body 填充 */
     .el-dialog__body {
-        padding: 20px;
-        color: #ccc;
+        padding: 0;
+        height: 100%;
+        width: 100%;
     }
 }
 
-/* 顶部信息栏样式 */
+/* 自定义顶部 Header 样式 */
+.custom-header-wrapper {
+    position: absolute;
+    top: -24px; /* 根据图片实际高度调整，让其骑在边框上 */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    .header-img {
+        height: 44px; /* 根据实际图片大小调整 */
+        width: auto;
+        display: block;
+    }
+
+    .header-title {
+        position: absolute;
+        color: #fff;
+        font-weight: bold;
+        font-size: 16px;
+        letter-spacing: 1px;
+        text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+        top: 45%; /* 微调垂直居中 */
+        transform: translateY(-50%);
+    }
+}
+
+/* 内容包裹层 */
+.detail-content-wrapper {
+    padding: 30px 20px 20px 20px; /* 顶部留多一点给Header */
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 顶部搜索栏 */
 .detail-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
     border-bottom: 1px dashed $border-color;
+    flex-shrink: 0; /* 防止被压缩 */
 
     .left-info {
         display: flex;
@@ -268,142 +315,107 @@ $highlight-bg: rgba(0, 234, 255, 0.1);
             color: $text-white;
         }
     }
-
-    /* 自定义输入框样式 */
     .custom-input {
         width: 250px;
         ::v-deep .el-input__inner {
             background-color: rgba(255, 255, 255, 0.1);
             border: 1px solid $border-color;
             color: $text-white;
-            border-radius: 4px;
-            &:focus {
-                border-color: $text-blue;
-            }
+            height: 32px;
+            line-height: 32px;
+        }
+        ::v-deep .el-input__icon {
+            line-height: 32px;
         }
     }
 }
 
-/* 滚动区域，防止弹窗过长 */
-.dialog-content-scroll {
-    max-height: 65vh;
-    overflow-y: auto;
-    padding-right: 10px;
+/* 主体内容区 - 左右布局 */
+.detail-body {
+    display: flex;
+    gap: 20px;
+    overflow: hidden; /* 固定高度，若内容过多则隐藏，符合“固定大小”要求 */
+    /* 如果希望内容过多时内部滚动，可改为 overflow-y: auto; */
 
-    /* 自定义滚动条 */
-    &::-webkit-scrollbar {
-        width: 6px;
-    }
-    &::-webkit-scrollbar-thumb {
-        background: $border-color;
-        border-radius: 3px;
-    }
-    &::-webkit-scrollbar-track {
-        background: transparent;
+    .left-part,
+    .right-part {
+        flex: 1;
+        width: 50%;
     }
 }
 
-/* 通用区块样式 */
+/* 区块通用 */
 .section-block {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 
     .section-title {
-        font-size: 14px;
+        font-size: 13px;
         color: $text-white;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
         display: flex;
         align-items: center;
         font-weight: bold;
 
         .num-box {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            line-height: 20px;
+            width: 18px;
+            height: 18px;
+            line-height: 18px;
             text-align: center;
             background-color: #007acc;
             color: #fff;
             font-size: 12px;
-            margin-right: 8px;
+            margin-right: 6px;
             border-radius: 2px;
         }
     }
 }
 
-/* 网格数据样式 */
+/* 表格样式优化（更紧凑以适应固定高度） */
 .info-grid {
     border-top: 1px solid $border-color;
     border-left: 1px solid $border-color;
 
-    .el-col {
-        border-right: 1px solid $border-color;
-        border-bottom: 1px solid $border-color;
-    }
-
     .info-item {
         display: flex;
         font-size: 12px;
-        line-height: 32px; /* 控制行高 */
+        height: 28px; /* 压低高度 */
+        line-height: 28px;
+        width: 100%;
+        border-right: 1px solid $border-color;
+        border-bottom: 1px solid $border-color;
 
         .label {
             width: 40%;
             background-color: rgba(255, 255, 255, 0.05);
-            color: #b0c4de; /* 浅蓝灰色 */
-            padding-left: 10px;
+            color: #b0c4de;
+            padding: 0 5px;
             border-right: 1px solid $border-color;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .value {
             width: 60%;
-            padding-left: 10px;
+            padding: 0 5px;
             color: $text-white;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
     }
 }
 
-/* 简单的单行文本样式 */
-.single-text-row {
-    font-size: 13px;
-    color: $text-white;
-    padding-left: 28px; /* 对齐文字 */
-}
-
-/* 附件列表样式 */
+.single-text-row,
 .attachment-list {
-    padding-left: 28px;
-    font-size: 13px;
-
-    .attach-row {
-        display: flex;
-        align-items: center;
-        margin-bottom: 10px;
-        color: #ccc;
-
-        .icon-blue {
-            color: $text-blue;
-            font-size: 16px;
-            margin-right: 8px;
-        }
-
-        .attach-label {
-            margin-right: 15px;
-        }
-
-        .link-text {
-            color: $text-blue;
-            text-decoration: none;
-            margin-right: 15px;
-            &:hover {
-                text-decoration: underline;
-                color: #fff;
-            }
-        }
-
-        .multi-links {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
+    font-size: 12px;
+    padding-left: 24px;
+    color: #ccc;
+    .link-text {
+        color: $text-blue;
+        text-decoration: none;
+        margin-left: 5px;
     }
 }
 </style>
